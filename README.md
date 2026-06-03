@@ -113,11 +113,9 @@ Bring up a single VM:
 vagrant up k3s-a-master
 ```
 
-## Optional: DNS
+## Local DNS
 
-Nothing in the lab requires DNS — all internal references use IPs. For
-convenience you can register the VM hostnames in your local DNS server
-(`LAB_DNS` in `.env.local`):
+Register the VM hostnames in your local DNS server (`LAB_DNS` in `.env.local`):
 
 ```
 k3s-a-master.lab.home  192.168.50.4
@@ -125,6 +123,19 @@ k3s-a-agent.lab.home   192.168.50.5
 k3s-b-master.lab.home  192.168.50.6
 k3s-b-agent.lab.home   192.168.50.7
 ```
+
+For application access, configure wildcard ingress zones on your Raspberry Pi
+DNS server:
+
+```
+*.a.lab.home  192.168.50.240
+*.b.lab.home  192.168.50.245
+```
+
+Those IPs are the default `CLUSTER_A_INGRESS_IP` and `CLUSTER_B_INGRESS_IP`
+values in `.env.example`; they will be assigned to each cluster's Traefik
+LoadBalancer by MetalLB. See `docs/local-dns.md` for the Raspberry Pi / dnsmasq
+setup.
 
 ## What gets provisioned
 
@@ -156,7 +167,7 @@ script so the whole sequence is replayable.
 | ----- | ------------------------------------------------------------------------------------------- |
 | 0     | **(done by this Vagrantfile)** Provision 4 VMs, install k3s, install Gateway API CRDs       |
 | 1     | Bootstrap Argo CD on cluster A; declaratively register cluster B                            |
-| 2     | Argo CD installs Traefik and Linkerd (control plane + multicluster) on both clusters        |
+| 2     | Argo CD installs MetalLB, Traefik, and Linkerd (control plane + multicluster) on both clusters |
 | 3     | Install MinIO + LGTM stack on cluster B; install Alloy agents on both clusters              |
 | 4     | Deploy `frontend → backend` sample apps to cluster A only                                   |
 | 5     | Deploy `backend` to cluster B too; export it via Linkerd service mirror                     |

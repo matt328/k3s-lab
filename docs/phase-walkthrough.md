@@ -35,3 +35,20 @@ After this point, Argo CD manages itself from Git via:
 
 Cluster credentials are not committed. `scripts/register-cluster-b.sh`
 generates and applies them directly.
+
+## Phase 2: cluster ingress and platform networking
+
+Before installing Traefik for real application access, configure local DNS as
+documented in `docs/local-dns.md`.
+
+The intended model is:
+
+- MetalLB assigns a stable LoadBalancer IP to Traefik in each cluster.
+- Raspberry Pi DNS has wildcard records:
+  - `*.a.lab.home -> cluster A Traefik IP`
+  - `*.b.lab.home -> cluster B Traefik IP`
+- Applications declare hostnames such as `argocd.a.lab.home` or
+  `frontend.b.lab.home` through Ingress or HTTPRoute.
+
+That lets the lab stop relying on port-forwarding while keeping DNS setup
+simple and reproducible.
