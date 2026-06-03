@@ -3,6 +3,7 @@
 # (both are GitOps-managed) and install the Gateway API standard CRDs.
 #
 # Required env: K3S_TOKEN, NODE_IP, GATEWAY_API_VERSION
+# Optional env: FLANNEL_IFACE (default: eth1)
 #
 # Server config is reconciled on every provision run. If it changes after k3s is
 # already installed, the service is restarted so the new config is applied.
@@ -11,6 +12,7 @@ set -euo pipefail
 : "${K3S_TOKEN:?}"
 : "${NODE_IP:?}"
 : "${GATEWAY_API_VERSION:?}"
+FLANNEL_IFACE="${FLANNEL_IFACE:-eth1}"
 
 install -d -m 0755 /etc/rancher/k3s
 desired_config="$(mktemp)"
@@ -19,6 +21,8 @@ cat >"${desired_config}" <<EOF
 disable:
   - traefik
   - servicelb
+disable-cloud-controller: true
+flannel-iface: ${FLANNEL_IFACE}
 node-ip: ${NODE_IP}
 write-kubeconfig-mode: "0644"
 EOF

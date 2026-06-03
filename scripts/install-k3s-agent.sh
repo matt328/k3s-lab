@@ -2,22 +2,21 @@
 # Install k3s in agent mode joining its cluster's master.
 #
 # Required env: K3S_TOKEN, MASTER_IP, NODE_IP
-# Optional env: NODE_LABELS (comma-separated k3s node labels)
+# Optional env: NODE_LABELS (comma-separated k3s node labels), FLANNEL_IFACE
+# (default: eth1)
 set -euo pipefail
 
 : "${K3S_TOKEN:?}"
 : "${MASTER_IP:?}"
 : "${NODE_IP:?}"
-
-if [ -x /usr/local/bin/k3s ]; then
-  echo "k3s already installed; skipping"
-  exit 0
-fi
+FLANNEL_IFACE="${FLANNEL_IFACE:-eth1}"
 
 # Persist node-ip via a config file so it survives reinstalls / restarts.
 install -d -m 0755 /etc/rancher/k3s
-cat >/etc/rancher/k3s/config.yaml <<EOF
+desired_config="$(mktemp)"
+cat >"${desired_config}" <<EOF
 # Managed by scripts/install-k3s-agent.sh. Edit and re-install to change.
+flannel-iface: ${FLANNEL_IFACE}
 node-ip: ${NODE_IP}
 EOF
 
@@ -27,7 +26,23 @@ if [ -n "${NODE_LABELS:-}" ]; then
     for label in ${NODE_LABELS//,/ }; do
       echo "  - ${label}"
     done
-  } >>/etc/rancher/k3s/config.yaml
+  } >>"${desired_config}"
+fi
+
+config_changed=false
+if ! cmp -s "${desired_config}" /etc/rancher/k3s/config.yaml 2>/dev/null; then
+  install -m 0644 "${desired_config}" /etc/rancher/k3s/config.yaml
+  config_changed=true
+fi
+rm -f "${desired_config}"
+
+if [ -x /usr/local/bin/k3s ]; then
+  echo "k3s already installed; skipping install"
+  if [ "${config_changed}" = true ]; then
+    echo "k3s agent config changed; restarting k3s-agent"
+    systemctl restart k3s-agent
+  fi
+  exit 0
 fi
 
 # wait for the master's API to be reachable

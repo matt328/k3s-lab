@@ -6,9 +6,20 @@ set -euo pipefail
 OUT_DIR="$(cd "$(dirname "$0")/.." && pwd)/kubeconfigs"
 mkdir -p "$OUT_DIR"
 
+cd "$(dirname "$0")/.."
+set -a
+# shellcheck disable=SC1091
+[ -f .env.example ] && . ./.env.example
+# shellcheck disable=SC1091
+[ -f .env.local ] && . ./.env.local
+set +a
+
+: "${VM_A_MASTER_IP:?}"
+: "${VM_B_MASTER_IP:?}"
+
 declare -A MASTERS=(
-  ["cluster-a"]="k3s-a-master:192.168.50.4"
-  ["cluster-b"]="k3s-b-master:192.168.50.6"
+  ["cluster-a"]="k3s-a-master:${VM_A_MASTER_IP}"
+  ["cluster-b"]="k3s-b-master:${VM_B_MASTER_IP}"
 )
 
 for cluster in "${!MASTERS[@]}"; do

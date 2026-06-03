@@ -203,6 +203,24 @@ configure_user_access() {
   fi
 }
 
+libvirt_pool_running() {
+  local state
+  state="$(
+    as_root virsh -c qemu:///system pool-info default 2>/dev/null \
+      | awk -F: '$1 == "State" { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2 }'
+  )"
+  [ "$state" = "running" ]
+}
+
+libvirt_network_active() {
+  local active
+  active="$(
+    as_root virsh -c qemu:///system net-info default 2>/dev/null \
+      | awk -F: '$1 == "Active" { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2 }'
+  )"
+  [ "$active" = "yes" ]
+}
+
 ensure_default_storage_pool() {
   log "Ensuring the default libvirt storage pool exists and autostarts"
   as_root mkdir -p /var/lib/libvirt/images
@@ -212,7 +230,7 @@ ensure_default_storage_pool() {
   fi
 
   as_root virsh -c qemu:///system pool-autostart default >/dev/null
-  if ! as_root virsh -c qemu:///system pool-info default | grep -q '^State:.*running'; then
+  if ! libvirt_pool_running; then
     as_root virsh -c qemu:///system pool-start default >/dev/null
   fi
 }
@@ -221,7 +239,7 @@ ensure_default_network() {
   if as_root virsh -c qemu:///system net-info default >/dev/null 2>&1; then
     log "Ensuring the default libvirt network autostarts"
     as_root virsh -c qemu:///system net-autostart default >/dev/null
-    if ! as_root virsh -c qemu:///system net-info default | grep -q '^Active:.*yes'; then
+    if ! libvirt_network_active; then
       as_root virsh -c qemu:///system net-start default >/dev/null
     fi
   elif [ -f /usr/share/libvirt/networks/default.xml ]; then

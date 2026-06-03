@@ -7,10 +7,10 @@ patterns.
 
 | Hostname     | Cluster   | Role   | IP (default) | MAC (default)     |
 | ------------ | --------- | ------ | ------------ | ----------------- |
-| k3s-a-master | cluster-a | server | 192.168.50.4 | 52:54:00:a1:00:01 |
-| k3s-a-agent  | cluster-a | agent  | 192.168.50.5 | 52:54:00:a1:00:02 |
-| k3s-b-master | cluster-b | server | 192.168.50.6 | 52:54:00:b1:00:01 |
-| k3s-b-agent  | cluster-b | agent  | 192.168.50.7 | 52:54:00:b1:00:02 |
+| k3s-a-master | cluster-a | server | 192.168.50.100 | 52:54:00:a1:00:01 |
+| k3s-a-agent  | cluster-a | agent  | 192.168.50.101 | 52:54:00:a1:00:02 |
+| k3s-b-master | cluster-b | server | 192.168.50.102 | 52:54:00:b1:00:01 |
+| k3s-b-agent  | cluster-b | agent  | 192.168.50.103 | 52:54:00:b1:00:02 |
 
 IPs and MACs are configurable via `.env.local`. All 4 VMs are bridged onto
 the host bridge (default `br0`) and are first-class LAN citizens.
@@ -20,10 +20,10 @@ libvirt host:
 
 | Hostname       | Cluster   | Role  | IP (default)  | MAC (default)     |
 | -------------- | --------- | ----- | ------------- | ----------------- |
-| k3s-a-remote-1 | cluster-a | agent | 192.168.50.8  | 52:54:00:a1:00:11 |
-| k3s-a-remote-2 | cluster-a | agent | 192.168.50.9  | 52:54:00:a1:00:12 |
-| k3s-b-remote-1 | cluster-b | agent | 192.168.50.10 | 52:54:00:b1:00:11 |
-| k3s-b-remote-2 | cluster-b | agent | 192.168.50.11 | 52:54:00:b1:00:12 |
+| k3s-a-remote-1 | cluster-a | agent | 192.168.50.104 | 52:54:00:a1:00:11 |
+| k3s-a-remote-2 | cluster-a | agent | 192.168.50.105 | 52:54:00:a1:00:12 |
+| k3s-b-remote-1 | cluster-b | agent | 192.168.50.106 | 52:54:00:b1:00:11 |
+| k3s-b-remote-2 | cluster-b | agent | 192.168.50.107 | 52:54:00:b1:00:12 |
 
 ## Host prerequisites
 
@@ -41,6 +41,8 @@ real LAN IPs. See **Host bridge setup** below.
 
 All environment-specific values (IPs, MACs, networking, k3s tokens, GitOps
 repo URL, GHCR namespace) live in `.env.local`, which is gitignored.
+The default VM IPs use `192.168.50.100`-`192.168.50.107`, leaving the
+`192.168.50.2`-`192.168.50.99` DHCP pool and MetalLB pools untouched.
 
 ```bash
 cp .env.example .env.local
@@ -128,10 +130,10 @@ vagrant up k3s-a-master
 Register the VM hostnames in your local DNS server (`LAB_DNS` in `.env.local`):
 
 ```
-k3s-a-master.lab.home  192.168.50.4
-k3s-a-agent.lab.home   192.168.50.5
-k3s-b-master.lab.home  192.168.50.6
-k3s-b-agent.lab.home   192.168.50.7
+k3s-a-master.lab.home  192.168.50.100
+k3s-a-agent.lab.home   192.168.50.101
+k3s-b-master.lab.home  192.168.50.102
+k3s-b-agent.lab.home   192.168.50.103
 ```
 
 For application access, configure wildcard ingress zones on your Raspberry Pi
@@ -210,10 +212,10 @@ REMOTE_LIBVIRT_URI=qemu+ssh://matt@idle-host/system
 REMOTE_LIBVIRT_SSH_PROXY_COMMAND="ssh -W %h:%p matt@idle-host"
 REMOTE_LAB_BRIDGE=br0
 
-VM_A_REMOTE_1_IP=192.168.50.8
-VM_A_REMOTE_2_IP=192.168.50.9
-VM_B_REMOTE_1_IP=192.168.50.10
-VM_B_REMOTE_2_IP=192.168.50.11
+VM_A_REMOTE_1_IP=192.168.50.104
+VM_A_REMOTE_2_IP=192.168.50.105
+VM_B_REMOTE_1_IP=192.168.50.106
+VM_B_REMOTE_2_IP=192.168.50.107
 ```
 
 Then run the normal deterministic provisioner:
