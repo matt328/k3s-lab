@@ -10,3 +10,6 @@ helmCharts:
     releaseName: argocd
     namespace: argocd
     valuesFile: values.yaml
+
+resources:
+  - redis-secret.yaml
