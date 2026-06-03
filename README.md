@@ -145,15 +145,19 @@ For each VM, in order:
    pins it to its static LAN IP via NetworkManager.
 2. **`scripts/install-k3s-server.sh`** (masters) or
    **`scripts/install-k3s-agent.sh`** (agents) — runs the official k3s
-   installer. Servers are installed with bundled Traefik disabled (it will
-   be GitOps-managed in Phase 1) and the Gateway API standard CRDs
-   (`GATEWAY_API_VERSION`) applied. Agents wait for their master's API to
-   be reachable before joining.
+   installer. Servers are configured with bundled Traefik and ServiceLB
+   disabled (both are GitOps-managed later) and the Gateway API standard CRDs
+   (`GATEWAY_API_VERSION`) applied. Agents wait for their master's API to be
+   reachable before joining.
 
-> ⚠️ **k3s install args (e.g. `--disable=traefik`) are baked in at install
-> time.** Changing `scripts/install-k3s-server.sh` after k3s is already
-> installed has no effect on existing nodes. To pick up server-arg changes
-> you must `vagrant destroy -f && vagrant up`.
+The server provisioner reconciles `/etc/rancher/k3s/config.yaml` on reruns. If
+server config changes after k3s is already installed, re-run:
+
+```bash
+vagrant provision k3s-a-master k3s-b-master
+```
+
+The provisioner restarts `k3s` only when the config changed.
 
 Each script is otherwise idempotent and can be re-run via `vagrant provision`.
 
@@ -223,3 +227,44 @@ credential secret. Your local git remote can still use SSH.
    ```
 
    Open <http://localhost:8080>, username `admin`.
+
+## Phase 2a: MetalLB, Traefik, and Argo CD ingress
+
+Phase 2a installs the ingress foundation through Argo CD:
+
+- MetalLB on both clusters
+- a per-cluster MetalLB IP pool
+- Traefik on both clusters
+- an Argo CD Ingress at `argocd.a.lab.home`
+
+Before syncing this phase, make sure k3s ServiceLB is disabled on both masters:
+
+```bash
+vagrant provision k3s-a-master k3s-b-master
+kubectl --context cluster-a -n kube-system get pods | grep svclb || echo "cluster-a: no ServiceLB"
+kubectl --context cluster-b -n kube-system get pods | grep svclb || echo "cluster-b: no ServiceLB"
+```
+
+Then commit/push the GitOps manifests. Argo CD will create the child
+Applications automatically from `gitops/bootstrap`.
+
+Verify:
+
+```bash
+kubectl --context cluster-a -n argocd get applications
+
+kubectl --context cluster-a -n metallb-system get pods,ipaddresspools,l2advertisements
+kubectl --context cluster-b -n metallb-system get pods,ipaddresspools,l2advertisements
+
+kubectl --context cluster-a -n traefik get svc traefik
+kubectl --context cluster-b -n traefik get svc traefik
+
+curl -I http://argocd.a.lab.home
+```
+
+Expected Traefik `EXTERNAL-IP` values:
+
+```text
+cluster-a: 192.168.50.240
+cluster-b: 192.168.50.245
+```

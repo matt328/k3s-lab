@@ -11,9 +11,9 @@ Phase 0 provisions two k3s clusters with Vagrant and libvirt:
 - `cluster-b`: `k3s-b-master`, `k3s-b-agent`
 
 Each VM is bridged to the LAN, statically addressed, and sized at 4 vCPU /
-6 GB by default. k3s bundled Traefik is disabled because Traefik will be
-managed later by Argo CD. Gateway API standard CRDs are installed up front on
-both clusters.
+6 GB by default. k3s bundled Traefik and ServiceLB are disabled because both
+are managed later by Argo CD. Gateway API standard CRDs are installed up front
+on both clusters.
 
 ## Phase 1: Argo CD bootstrap
 
@@ -52,3 +52,19 @@ The intended model is:
 
 That lets the lab stop relying on port-forwarding while keeping DNS setup
 simple and reproducible.
+
+Phase 2a installs:
+
+- MetalLB in L2 mode on both clusters
+- cluster A pool: `192.168.50.240-192.168.50.244`
+- cluster B pool: `192.168.50.245-192.168.50.249`
+- Traefik in a dedicated `traefik` namespace on both clusters
+- `argocd.a.lab.home` pointing to the Argo CD server through Traefik
+
+k3s ServiceLB must be disabled before this phase. Otherwise k3s' built-in
+`svclb-*` controller and MetalLB will both try to satisfy `LoadBalancer`
+Services. Re-run the master provisioners after pulling this phase:
+
+```bash
+vagrant provision k3s-a-master k3s-b-master
+```

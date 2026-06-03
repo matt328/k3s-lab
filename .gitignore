@@ -3,3 +3,4 @@ kubeconfigs/*.yaml
 .env.local
 .tools/
 argocd/charts/
+gitops/**/charts/

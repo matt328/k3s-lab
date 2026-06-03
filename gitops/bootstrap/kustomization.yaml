@@ -4,3 +4,8 @@ kind: Kustomization
 resources:
   - project.yaml
   - applications/argocd.yaml
+  - applications/metallb-cluster-a.yaml
+  - applications/metallb-cluster-b.yaml
+  - applications/traefik-cluster-a.yaml
+  - applications/traefik-cluster-b.yaml
+  - applications/argocd-ingress-cluster-a.yaml
