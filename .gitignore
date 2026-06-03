@@ -2,3 +2,4 @@ kubeconfigs/*.yaml
 .vagrant/
 .env.local
 .tools/
+argocd/charts/
