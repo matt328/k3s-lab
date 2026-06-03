@@ -68,3 +68,16 @@ Services. Re-run the master provisioners after pulling this phase:
 ```bash
 vagrant provision k3s-a-master k3s-b-master
 ```
+
+The phase has been verified from a clean rebuild:
+
+```bash
+vagrant destroy -f
+./scripts/up.sh
+./scripts/fetch-kubeconfigs.sh
+./scripts/bootstrap-argocd.sh
+```
+
+Result: all Argo CD Applications are `Synced` / `Healthy`, Traefik receives
+`192.168.50.240` in cluster A and `192.168.50.245` in cluster B, and
+`http://argocd.a.lab.home` returns HTTP 200.

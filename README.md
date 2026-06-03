@@ -219,7 +219,7 @@ credential secret. Your local git remote can still use SSH.
    The cluster-B token Secret is applied directly to the clusters and is not
    committed to this repository.
 
-4. Optional UI access:
+4. Optional UI access before Phase 2a installs ingress:
    ```bash
    kubectl --context cluster-a -n argocd port-forward svc/argocd-server 8080:80
    kubectl --context cluster-a -n argocd get secret argocd-initial-admin-secret \
@@ -268,3 +268,34 @@ Expected Traefik `EXTERNAL-IP` values:
 cluster-a: 192.168.50.240
 cluster-b: 192.168.50.245
 ```
+
+After Phase 2a, Argo CD is available without port-forwarding:
+
+```bash
+kubectl --context cluster-a -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d; echo
+open http://argocd.a.lab.home
+```
+
+## Clean rebuild smoke test
+
+This is the current end-to-end reproducibility check:
+
+```bash
+vagrant destroy -f
+./scripts/up.sh
+./scripts/fetch-kubeconfigs.sh
+./scripts/bootstrap-argocd.sh
+
+kubectl --context cluster-a -n argocd get applications
+kubectl --context cluster-a -n traefik get svc traefik
+kubectl --context cluster-b -n traefik get svc traefik
+curl -I http://argocd.a.lab.home
+```
+
+Expected:
+
+- all Argo CD Applications are `Synced` / `Healthy`
+- cluster A Traefik has `EXTERNAL-IP` `192.168.50.240`
+- cluster B Traefik has `EXTERNAL-IP` `192.168.50.245`
+- `http://argocd.a.lab.home` returns `HTTP/1.1 200 OK`
