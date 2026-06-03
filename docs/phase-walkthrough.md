@@ -15,6 +15,17 @@ Each VM is bridged to the LAN, statically addressed, and sized at 4 vCPU /
 are managed later by Argo CD. Gateway API standard CRDs are installed up front
 on both clusters.
 
+The Vagrantfile can optionally add four more agent nodes on a separate physical
+libvirt host:
+
+- `cluster-a`: `k3s-a-remote-1`, `k3s-a-remote-2`
+- `cluster-b`: `k3s-b-remote-1`, `k3s-b-remote-2`
+
+This mode is disabled by default and controlled by `.env.local`. The remote
+host must bridge onto the same LAN as the local host so the remote agents can
+reach the local masters and advertise normal LAN IPs. Remote agents get
+`lab.k3s.io/placement=remote` labels for future workload placement.
+
 ## Phase 1: Argo CD bootstrap
 
 Phase 1 installs Argo CD on cluster A using the community Helm chart through

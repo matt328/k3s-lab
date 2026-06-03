@@ -15,6 +15,16 @@ patterns.
 IPs and MACs are configurable via `.env.local`. All 4 VMs are bridged onto
 the host bridge (default `br0`) and are first-class LAN citizens.
 
+Optional remote workers can add four more 4 vCPU / 6 GB agent VMs on a second
+libvirt host:
+
+| Hostname       | Cluster   | Role  | IP (default)  | MAC (default)     |
+| -------------- | --------- | ----- | ------------- | ----------------- |
+| k3s-a-remote-1 | cluster-a | agent | 192.168.50.8  | 52:54:00:a1:00:11 |
+| k3s-a-remote-2 | cluster-a | agent | 192.168.50.9  | 52:54:00:a1:00:12 |
+| k3s-b-remote-1 | cluster-b | agent | 192.168.50.10 | 52:54:00:b1:00:11 |
+| k3s-b-remote-2 | cluster-b | agent | 192.168.50.11 | 52:54:00:b1:00:12 |
+
 ## Host prerequisites
 
 ```bash
@@ -160,6 +170,63 @@ vagrant provision k3s-a-master k3s-b-master
 The provisioner restarts `k3s` only when the config changed.
 
 Each script is otherwise idempotent and can be re-run via `vagrant provision`.
+
+## Optional remote worker host
+
+If the local machine is short on RAM, `.env.local` can enable four additional
+worker VMs on a separate libvirt host. They join the existing clusters as
+agents; they do not create new control planes.
+
+Hard prerequisites:
+
+- the remote host runs libvirt and is reachable by SSH from the local machine
+- the remote host has a bridge, usually `br0`, on the same L2 LAN/subnet as the
+  local bridge
+- the remote worker IPs are free, outside DHCP, and outside the MetalLB pools
+- the remote libvirt user can access `qemu:///system` and write to the default
+  storage pool
+- guest SSH must be proxied through the remote host because Vagrant provisions
+  over libvirt's management network before the bridged static IP exists
+
+Example `.env.local`:
+
+```bash
+REMOTE_LIBVIRT_ENABLED=true
+REMOTE_LIBVIRT_URI=qemu+ssh://matt@idle-host/system
+REMOTE_LIBVIRT_SSH_PROXY_COMMAND="ssh -W %h:%p matt@idle-host"
+REMOTE_LAB_BRIDGE=br0
+
+VM_A_REMOTE_1_IP=192.168.50.8
+VM_A_REMOTE_2_IP=192.168.50.9
+VM_B_REMOTE_1_IP=192.168.50.10
+VM_B_REMOTE_2_IP=192.168.50.11
+```
+
+Then run the normal deterministic provisioner:
+
+```bash
+./scripts/up.sh
+```
+
+Remote workers are labeled when they join:
+
+```text
+lab.k3s.io/placement=remote
+lab.k3s.io/cluster=cluster-a|cluster-b
+```
+
+Adding workers increases scheduling capacity, but it does not automatically
+move already-running stateful workloads such as MinIO, Loki, Tempo, Prometheus,
+or Grafana. Those pods keep their existing PVC/node placement unless you
+intentionally reschedule or reconfigure them.
+
+If you want to remove remote workers, destroy them before disabling the option;
+otherwise Vagrant will hide those machines from this Vagrantfile while they may
+still be running on the remote host:
+
+```bash
+vagrant destroy -f k3s-a-remote-1 k3s-a-remote-2 k3s-b-remote-1 k3s-b-remote-2
+```
 
 ## Migration phases (planned)
 

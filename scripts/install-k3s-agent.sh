@@ -2,6 +2,7 @@
 # Install k3s in agent mode joining its cluster's master.
 #
 # Required env: K3S_TOKEN, MASTER_IP, NODE_IP
+# Optional env: NODE_LABELS (comma-separated k3s node labels)
 set -euo pipefail
 
 : "${K3S_TOKEN:?}"
@@ -19,6 +20,15 @@ cat >/etc/rancher/k3s/config.yaml <<EOF
 # Managed by scripts/install-k3s-agent.sh. Edit and re-install to change.
 node-ip: ${NODE_IP}
 EOF
+
+if [ -n "${NODE_LABELS:-}" ]; then
+  {
+    echo "node-label:"
+    for label in ${NODE_LABELS//,/ }; do
+      echo "  - ${label}"
+    done
+  } >>/etc/rancher/k3s/config.yaml
+fi
 
 # wait for the master's API to be reachable
 master_ready=false
