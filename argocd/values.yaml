@@ -26,6 +26,12 @@ dex:
 redis-ha:
   enabled: false
 
+redis:
+  auth: false
+
+redisSecretInit:
+  enabled: false
+
 server:
   insecure: true
   replicas: 1
