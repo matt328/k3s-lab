@@ -1,0 +1,30 @@
+tempo:
+  reportingEnabled: false
+  memBallastSizeMbs: 128
+  retention: 72h
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  storage:
+    trace:
+      backend: s3
+      s3:
+        bucket: tempo-traces
+        endpoint: minio.observability.svc.cluster.local:9000
+        access_key: k3s-lab-minio
+        secret_key: k3s-lab-minio-password
+        insecure: true
+        forcepathstyle: true
+      wal:
+        path: /var/tempo/wal
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 10Gi
+
+service:
+  type: ClusterIP

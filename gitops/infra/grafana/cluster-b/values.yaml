@@ -1,0 +1,52 @@
+adminUser: admin
+adminPassword: k3s-lab-grafana-password
+
+persistence:
+  enabled: true
+  storageClassName: local-path
+  size: 5Gi
+
+testFramework:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+service:
+  type: ClusterIP
+
+ingress:
+  enabled: true
+  ingressClassName: traefik
+  hosts:
+    - grafana.b.lab.home
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: http://prometheus-server.observability.svc.cluster.local
+        isDefault: true
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki.observability.svc.cluster.local:3100
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        access: proxy
+        url: http://tempo.observability.svc.cluster.local:3200
+        jsonData:
+          tracesToLogsV2:
+            datasourceUid: loki
+          tracesToMetrics:
+            datasourceUid: prometheus

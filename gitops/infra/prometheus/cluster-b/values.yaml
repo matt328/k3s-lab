@@ -1,0 +1,29 @@
+alertmanager:
+  enabled: false
+
+prometheus-pushgateway:
+  enabled: false
+
+kube-state-metrics:
+  enabled: true
+
+prometheus-node-exporter:
+  enabled: true
+
+server:
+  extraArgs:
+    web.enable-remote-write-receiver: null
+  retention: 3d
+  persistentVolume:
+    enabled: true
+    storageClass: local-path
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  service:
+    type: ClusterIP
+    servicePort: 80

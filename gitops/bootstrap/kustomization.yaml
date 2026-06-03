@@ -9,3 +9,11 @@ resources:
   - applications/traefik-cluster-a.yaml
   - applications/traefik-cluster-b.yaml
   - applications/argocd-ingress-cluster-a.yaml
+  - applications/minio-cluster-b.yaml
+  - applications/loki-cluster-b.yaml
+  - applications/tempo-cluster-b.yaml
+  - applications/prometheus-cluster-b.yaml
+  - applications/grafana-cluster-b.yaml
+  - applications/observability-ingress-cluster-b.yaml
+  - applications/alloy-cluster-a.yaml
+  - applications/alloy-cluster-b.yaml

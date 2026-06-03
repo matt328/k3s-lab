@@ -1,0 +1,62 @@
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: s3
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+  storage:
+    type: s3
+    bucketNames:
+      chunks: loki-chunks
+      ruler: loki-ruler
+      admin: loki-admin
+    s3:
+      endpoint: http://minio.observability.svc.cluster.local:9000
+      region: us-east-1
+      accessKeyId: k3s-lab-minio
+      secretAccessKey: k3s-lab-minio-password
+      s3ForcePathStyle: true
+      insecure: true
+  limits_config:
+    allow_structured_metadata: true
+    retention_period: 72h
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: true
+    storageClass: local-path
+    size: 10Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+
+write:
+  replicas: 0
+read:
+  replicas: 0
+backend:
+  replicas: 0
+
+gateway:
+  enabled: false
+
+resultsCache:
+  enabled: false
+chunksCache:
+  enabled: false
+
+test:
+  enabled: false

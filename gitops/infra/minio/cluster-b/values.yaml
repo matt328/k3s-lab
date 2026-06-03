@@ -1,0 +1,35 @@
+mode: standalone
+
+existingSecret: minio-root
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  size: 20Gi
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+buckets:
+  - name: loki-chunks
+    policy: none
+    purge: false
+  - name: loki-ruler
+    policy: none
+    purge: false
+  - name: loki-admin
+    policy: none
+    purge: false
+  - name: tempo-traces
+    policy: none
+    purge: false
+
+service:
+  type: ClusterIP
+
+consoleService:
+  type: ClusterIP

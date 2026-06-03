@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: alloy-cluster-a
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "70"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/matt328/k3s-lab.git
+    targetRevision: main
+    path: gitops/infra/alloy/cluster-a
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
