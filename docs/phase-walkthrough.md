@@ -81,3 +81,51 @@ vagrant destroy -f
 Result: all Argo CD Applications are `Synced` / `Healthy`, Traefik receives
 `192.168.50.240` in cluster A and `192.168.50.245` in cluster B, and
 `http://argocd.a.lab.home` returns HTTP 200.
+
+## Phase 3: observability foundation
+
+Phase 3a puts the shared observability backends in cluster B before workload
+migration begins. This keeps telemetry available while cluster A is later
+drained or shut down.
+
+Installed on cluster B:
+
+- MinIO, using local-path storage, with `loki-chunks`, `loki-ruler`,
+  `loki-admin`, and `tempo-traces` buckets
+- Loki, configured to use MinIO object storage
+- Tempo, configured to use MinIO object storage and receive OTLP/HTTP traces
+- Prometheus, with local-path persistence and remote-write receiver enabled
+- Grafana, with provisioned Loki, Prometheus, and Tempo datasources
+- Ingress for `grafana.b.lab.home`, `loki.b.lab.home`,
+  `prometheus.b.lab.home`, and `tempo.b.lab.home`
+
+Installed on both clusters:
+
+- Grafana Alloy as a DaemonSet
+- Pod log collection to Loki
+- annotation-based Prometheus scraping to cluster-B Prometheus
+
+This phase is intentionally "prod-shaped" rather than production HA. It uses
+real persistent stores and object-storage-backed logs/traces, but the storage is
+still local-path and single-replica for lab simplicity.
+
+The current verification state:
+
+```bash
+kubectl --context cluster-a -n argocd get applications
+kubectl --context cluster-b -n observability get pods,pvc,ingress
+kubectl --context cluster-a -n observability get pods
+curl -I http://grafana.b.lab.home
+curl http://loki.b.lab.home/ready
+curl http://prometheus.b.lab.home/-/ready
+curl -o /dev/null -s -w '%{http_code}\n' http://tempo.b.lab.home/v1/traces
+```
+
+Expected:
+
+- all Argo CD Applications are `Synced` / `Healthy`
+- all cluster-B observability pods are Running
+- Alloy pods are Running on both clusters
+- Grafana returns a login redirect at `http://grafana.b.lab.home`
+- Loki and Prometheus readiness endpoints are ready
+- Tempo's OTLP/HTTP endpoint returns `405` to GET and accepts POSTed traces

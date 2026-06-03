@@ -171,15 +171,16 @@ script so the whole sequence is replayable.
 | ----- | ------------------------------------------------------------------------------------------- |
 | 0     | **(done by this Vagrantfile)** Provision 4 VMs, install k3s, install Gateway API CRDs       |
 | 1     | Bootstrap Argo CD on cluster A; declaratively register cluster B                            |
-| 2     | Argo CD installs MetalLB, Traefik, and Linkerd (control plane + multicluster) on both clusters |
-| 3     | Install MinIO + LGTM stack on cluster B; install Alloy agents on both clusters              |
-| 4     | Deploy `frontend → backend` sample apps to cluster A only                                   |
-| 5     | Deploy `backend` to cluster B too; export it via Linkerd service mirror                     |
-| 6     | Weighted east/west traffic shift for `backend`: 100/0 → 75/25 → 50/50 → 25/75 → 0/100       |
-| 7     | Remove `backend` from cluster A                                                             |
-| 8     | Install Argo CD on cluster B; orphan apps from A's Argo; adopt in B's Argo; delete A's Argo |
-| 9     | DNS cutover: point ingress hostnames at cluster B (manual, on your local resolver)          |
-| 10    | Halt cluster A VMs                                                                          |
+| 2     | Argo CD installs MetalLB and Traefik on both clusters; Argo CD gets LAN ingress             |
+| 3     | Install MinIO + observability stack on cluster B; install Alloy agents on both clusters     |
+| 4     | Install Linkerd control plane + multicluster on both clusters                               |
+| 5     | Deploy `frontend → backend` sample apps to cluster A only                                   |
+| 6     | Deploy `backend` to cluster B too; export it via Linkerd service mirror                     |
+| 7     | Weighted east/west traffic shift for `backend`: 100/0 → 75/25 → 50/50 → 25/75 → 0/100       |
+| 8     | Remove `backend` from cluster A                                                             |
+| 9     | Install Argo CD on cluster B; orphan apps from A's Argo; adopt in B's Argo; delete A's Argo |
+| 10    | DNS cutover: point ingress hostnames at cluster B (manual, on your local resolver)          |
+| 11    | Halt cluster A VMs                                                                          |
 
 See `docs/phase-walkthrough.md` for the narrative version (forthcoming).
 
@@ -277,6 +278,50 @@ kubectl --context cluster-a -n argocd get secret argocd-initial-admin-secret \
 open http://argocd.a.lab.home
 ```
 
+## Phase 3a: Observability foundation
+
+Phase 3a installs the observability backends on **cluster B** and lightweight
+Alloy collectors on both clusters:
+
+- MinIO object storage with lab buckets for Loki and Tempo
+- Loki for logs
+- Tempo for traces over OTLP/HTTP
+- Prometheus for metrics, with remote-write receiver enabled
+- Grafana with Loki, Prometheus, and Tempo datasources
+- Ingress hosts under `*.b.lab.home`
+
+Grafana is available at:
+
+```bash
+kubectl --context cluster-b -n observability get secret grafana \
+  -o jsonpath='{.data.admin-password}' | base64 -d; echo
+open http://grafana.b.lab.home
+```
+
+Username is `admin`. Intake endpoints for collectors and later apps:
+
+```text
+Loki:       http://loki.b.lab.home/loki/api/v1/push
+Prometheus: http://prometheus.b.lab.home/api/v1/write
+Tempo:      http://tempo.b.lab.home/v1/traces
+```
+
+Verify:
+
+```bash
+kubectl --context cluster-a -n argocd get applications
+kubectl --context cluster-b -n observability get pods,pvc,ingress
+kubectl --context cluster-a -n observability get pods
+
+curl -I http://grafana.b.lab.home
+curl http://loki.b.lab.home/ready
+curl http://prometheus.b.lab.home/-/ready
+curl -o /dev/null -s -w '%{http_code}\n' http://tempo.b.lab.home/v1/traces
+```
+
+Expected Tempo result is `405` for a GET request; the OTLP/HTTP endpoint only
+accepts POST.
+
 ## Clean rebuild smoke test
 
 This is the current end-to-end reproducibility check:
@@ -291,6 +336,7 @@ kubectl --context cluster-a -n argocd get applications
 kubectl --context cluster-a -n traefik get svc traefik
 kubectl --context cluster-b -n traefik get svc traefik
 curl -I http://argocd.a.lab.home
+curl -I http://grafana.b.lab.home
 ```
 
 Expected:
@@ -299,3 +345,4 @@ Expected:
 - cluster A Traefik has `EXTERNAL-IP` `192.168.50.240`
 - cluster B Traefik has `EXTERNAL-IP` `192.168.50.245`
 - `http://argocd.a.lab.home` returns `HTTP/1.1 200 OK`
+- `http://grafana.b.lab.home` returns `HTTP/1.1 302 Found` to `/login`
