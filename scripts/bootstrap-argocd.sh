@@ -35,6 +35,7 @@ kubectl --context "${cluster_a_context}" create namespace "${namespace}" \
   --dry-run=client -o yaml | kubectl --context "${cluster_a_context}" apply -f -
 
 echo "installing/upgrading Argo CD from argocd/ Helm chart"
+rm -rf argocd/charts
 kubectl kustomize --enable-helm argocd \
   | kubectl --context "${cluster_a_context}" apply -f -
 
