@@ -85,7 +85,7 @@ doesn't expose bridge-slave configuration well.
 ## Usage
 
 ```bash
-vagrant up                              # provision all 4 VMs and install k3s
+./scripts/up.sh                         # provision all 4 VMs and install k3s
 ./scripts/fetch-kubeconfigs.sh          # writes kubeconfigs/cluster-{a,b}.yaml
                                         # AND merges them into ~/.kube/config
                                         # (existing config is backed up first)
@@ -101,6 +101,11 @@ vagrant provision                       # re-run provisioners (idempotent)
 vagrant reload --provision              # reboot + re-provision
 vagrant destroy -f                      # tear everything down
 ```
+
+Use `./scripts/up.sh` instead of plain `vagrant up`. Vagrant may provision
+machines in parallel, which can race an agent ahead of its master. The wrapper
+uses `vagrant up --no-parallel` so each master installs k3s before its agent
+tries to join.
 
 Bring up a single VM:
 
