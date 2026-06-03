@@ -47,8 +47,31 @@ Update `.env.local` if those addresses conflict with your network.
 
 ## Raspberry Pi DNS setup
 
-The Pi at `192.168.50.210` should answer for the wildcard zones. If it is
-running Pi-hole, add a dnsmasq config file:
+The Pi at `192.168.50.210` should answer for the wildcard zones.
+
+### Pi-hole v6+
+
+Pi-hole v6 manages FTL configuration through `/etc/pihole/pihole.toml`.
+Dropping files into `/etc/dnsmasq.d` is ignored unless `misc.etc_dnsmasq_d` is
+enabled, so use the v6-native `misc.dnsmasq_lines` setting:
+
+```bash
+sudo pihole-FTL --config misc.dnsmasq_lines \
+  '["address=/a.lab.home/192.168.50.240","address=/b.lab.home/192.168.50.245"]'
+
+sudo pihole restartdns
+```
+
+If you previously created `/etc/dnsmasq.d/05-k3s-lab-wildcards.conf`, remove it
+to avoid confusion:
+
+```bash
+sudo rm -f /etc/dnsmasq.d/05-k3s-lab-wildcards.conf
+```
+
+### Pi-hole v5 or plain dnsmasq
+
+If you are using Pi-hole v5 or plain dnsmasq, add a dnsmasq config file:
 
 ```bash
 sudo tee /etc/dnsmasq.d/05-k3s-lab-wildcards.conf >/dev/null <<'EOF'
@@ -64,7 +87,6 @@ EOF
 Validate and reload DNS:
 
 ```bash
-sudo pihole-FTL --test
 sudo pihole restartdns
 ```
 
