@@ -188,6 +188,20 @@ Hard prerequisites:
 - guest SSH must be proxied through the remote host because Vagrant provisions
   over libvirt's management network before the bridged static IP exists
 
+On the remote Fedora host, run the setup helper from a local console because
+creating the bridge can briefly drop the wired network:
+
+```bash
+./scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0
+```
+
+If you want the remote host itself to use the lab DNS resolver:
+
+```bash
+./scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0 \
+  --dns "192.168.50.210" --dns-search lab.home --ignore-auto-dns
+```
+
 Example `.env.local`:
 
 ```bash
