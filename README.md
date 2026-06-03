@@ -162,3 +162,48 @@ script so the whole sequence is replayable.
 | 10    | Halt cluster A VMs                                                                          |
 
 See `docs/phase-walkthrough.md` for the narrative version (forthcoming).
+
+## Phase 1: Bootstrap Argo CD
+
+Argo CD is installed on **cluster A** using the community Helm chart
+(`argo/argo-cd`) rendered by `kubectl kustomize --enable-helm`, matching the
+pattern in the reference EKS develop-tools repo. The checked-in `argocd/` directory
+is the chart wrapper; Argo CD then manages that same directory from Git.
+
+This repository is public, so Argo CD reads it over HTTPS without a repository
+credential secret. Your local git remote can still use SSH.
+
+1. Ensure `.env.local` points at this repo:
+   ```bash
+   GITOPS_REPO_URL=https://github.com/matt328/k3s-lab.git
+   GITOPS_REPO_REVISION=main
+   GITOPS_REPO_PATH=gitops
+   GHCR_OWNER=matt328
+   ```
+
+2. Commit and push any GitOps changes. Argo CD can only sync what exists in
+   GitHub.
+
+3. Bootstrap Argo CD and register cluster B:
+   ```bash
+   ./scripts/bootstrap-argocd.sh
+   ```
+
+   The script:
+   - installs/upgrades Argo CD from `argocd/`
+   - waits for the core Argo CD deployments
+   - creates an `argocd-manager` service account in cluster B
+   - applies a generated cluster-B registration Secret into cluster A
+   - applies the root `bootstrap` Application
+
+   The cluster-B token Secret is applied directly to the clusters and is not
+   committed to this repository.
+
+4. Optional UI access:
+   ```bash
+   kubectl --context cluster-a -n argocd port-forward svc/argocd-server 8080:80
+   kubectl --context cluster-a -n argocd get secret argocd-initial-admin-secret \
+     -o jsonpath='{.data.password}' | base64 -d; echo
+   ```
+
+   Open <http://localhost:8080>, username `admin`.
