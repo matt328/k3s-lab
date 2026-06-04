@@ -545,6 +545,39 @@ Simulate a main-branch release:
 ./scripts/ci-order-api.sh main
 ```
 
+## Phase 5.4: Order service image CI simulation
+
+The Order service is vendored under:
+
+```text
+apps/services/order-service
+```
+
+This step only wires build and image publishing. Runtime cloud-native changes
+such as Actuator, metrics, tracing, and structured logging are handled later.
+
+The local CI simulation resolves the Order API artifact from Reposilite, builds
+with the service's Gradle wrapper, and publishes with Jib to:
+
+```text
+registry.b.lab.home/k3s-lab/order-service
+```
+
+Jib pushes directly to the registry, so this script does not require a local
+Docker daemon.
+
+Simulate a feature-branch image publish:
+
+```bash
+./scripts/ci-order-service.sh feature feature/order-service-build
+```
+
+Simulate a main-branch image release:
+
+```bash
+./scripts/ci-order-service.sh main
+```
+
 ## Clean rebuild smoke test
 
 This is the current end-to-end reproducibility check:

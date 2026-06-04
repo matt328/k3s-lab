@@ -1,0 +1,132 @@
+plugins {
+  id 'java'
+  id 'org.springframework.boot' version '3.5.9'
+  id 'io.spring.dependency-management' version '1.1.7'
+  id 'org.openapi.generator' version '7.0.1'
+  id 'com.google.cloud.tools.jib' version '3.5.1'
+}
+
+group = 'dev.teeter.demos'
+version = providers.gradleProperty('version').get()
+description = 'Order service'
+
+def javaVersion = providers.gradleProperty('javaVersion').get()
+def orderApiVersion = providers.gradleProperty('orderApiVersion').get()
+def mavenRepositoryUrl = providers.gradleProperty('mavenRepositoryUrl')
+  .orElse(providers.environmentVariable('MAVEN_REPOSITORY_URL'))
+  .orElse('http://maven.b.lab.home/releases')
+  .get()
+def imageRepository = providers.gradleProperty('imageRepository')
+  .orElse(providers.environmentVariable('IMAGE_REPOSITORY'))
+  .orElse('registry.b.lab.home/k3s-lab/order-service')
+  .get()
+def imageTag = providers.gradleProperty('imageTag')
+  .orElse(providers.environmentVariable('IMAGE_TAG'))
+  .orElse(project.version.toString())
+  .get()
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(javaVersion.toInteger())
+  }
+}
+
+repositories {
+  mavenCentral()
+  maven {
+    name = 'lab'
+    url = uri(mavenRepositoryUrl)
+    allowInsecureProtocol = mavenRepositoryUrl.startsWith('http://')
+  }
+}
+
+ext {
+  set('springCloudVersion', '2025.0.0')
+}
+
+dependencyManagement {
+  imports {
+    mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+  }
+}
+
+configurations {
+  openapiSpec
+}
+
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-validation'
+  implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+  implementation 'org.openapitools:jackson-databind-nullable:0.2.5'
+  implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+  openapiSpec "dev.teeter.demos.apis:order-api-spec:${orderApiVersion}@yaml"
+}
+
+tasks.named('test') {
+  useJUnitPlatform()
+}
+
+jib {
+  from {
+    image = providers.gradleProperty('baseImage')
+      .orElse(providers.environmentVariable('BASE_IMAGE'))
+      .orElse("docker.io/library/eclipse-temurin:${javaVersion}-jre")
+      .get()
+  }
+  to {
+    image = "${imageRepository}:${imageTag}"
+  }
+  allowInsecureRegistries = true
+  container {
+    ports = ['8080']
+    labels = [
+      'org.opencontainers.image.title'      : 'order-service',
+      'org.opencontainers.image.description': 'Order service',
+      'org.opencontainers.image.version'    : project.version.toString(),
+      'k3s-lab.dev/order-api-version'       : orderApiVersion,
+    ]
+  }
+  outputPaths {
+    digest = file("${buildDir}/jib-image.digest")
+    imageId = file("${buildDir}/jib-image.id")
+    imageJson = file("${buildDir}/jib-image.json")
+  }
+}
+
+tasks.register('openApiGenerateOrdersServer', org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+  group = 'openapi tools'
+  generatorName = 'spring'
+  inputSpec = configurations.openapiSpec.singleFile.absolutePath
+  outputDir = "${buildDir}/generated"
+  invokerPackage = 'dev.teeter.demos.orders'
+  apiPackage = 'dev.teeter.demos.orders.api'
+  modelPackage = 'dev.teeter.demos.orders.model'
+
+  globalProperties.set([
+    models         : '',
+    apis           : '',
+    supportingFiles: 'ApiUtil.java'
+  ])
+
+  configOptions.set([
+    library           : 'spring-boot',
+    delegatePattern   : 'true',
+    generateController: 'true',
+    interfaceOnly     : 'false',
+    useJakartaEe      : 'true',
+    useSpringBoot3    : 'true',
+    useResponseEntity : 'false',
+    configPackage     : 'dev.teeter.demos.orders.configuration'
+  ])
+}
+
+sourceSets['main'].java.srcDir("${buildDir}/generated/src/main/java")
+
+tasks.named('compileJava') {
+  dependsOn(tasks.named('openApiGenerateOrdersServer'))
+}

@@ -28,6 +28,12 @@ The initial application inputs live outside this repo:
 The Order API has been vendored into this lab at `apps/apis/order-api` so local
 scripts can simulate the CI publish flow against `maven.b.lab.home`.
 
+The Order service has been vendored into this lab at
+`apps/services/order-service` so local scripts can simulate image publishing to
+`registry.b.lab.home` before runtime cloud-native changes are made. The image
+publish simulation uses Jib through the Gradle wrapper, so it does not require a
+local Docker daemon.
+
 ## Current-state snapshot
 
 The current projects already demonstrate the beginning of the desired pattern:

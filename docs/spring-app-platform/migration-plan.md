@@ -112,6 +112,9 @@ Work items:
 - create app namespaces and Argo CD Applications for cluster A
 - deploy a lab-local OCI image registry in cluster B at `registry.b.lab.home`
 - configure k3s nodes to pull from the HTTP lab registry
+- vendor Order service into `apps/services/order-service`
+- publish the Order service image to the lab-local registry with
+  `scripts/ci-order-service.sh`
 - publish container images for both services to the lab-local registry
 - document the image publish command used by local builds and CI
 - publish immutable tags and deploy by digest from Helm values
