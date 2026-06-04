@@ -1,6 +1,7 @@
 kubeconfigs/*.yaml
 .vagrant/
 .env.local
+.secrets/
 .tools/
 argocd/charts/
 gitops/**/charts/

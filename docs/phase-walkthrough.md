@@ -140,3 +140,47 @@ Expected:
 - Grafana returns a login redirect at `http://grafana.b.lab.home`
 - Loki and Prometheus readiness endpoints are ready
 - Tempo's OTLP/HTTP endpoint returns `405` to GET and accepts POSTed traces
+
+## Phase 4: Linkerd control plane and multicluster
+
+Phase 4 prepares the service mesh layer used by the later migration phases.
+Both clusters get a Linkerd control plane and the multicluster extension, then
+the clusters are linked in both directions so services exported from one side
+can be mirrored into the other.
+
+Unlike most platform components in this lab, Linkerd is intentionally
+script-managed instead of Argo CD-managed. The Linkerd Helm chart needs the
+identity issuer private key while rendering the control plane manifests. Since
+this repository is public, those keys must never be committed. The bootstrap
+script generates and reuses them from `.secrets/linkerd/`, which is gitignored.
+
+Run:
+
+```bash
+./scripts/bootstrap-linkerd.sh
+```
+
+The script:
+
+- installs the pinned Linkerd CLI under `.tools/`
+- generates one shared trust anchor and per-cluster issuer certificates
+- installs `linkerd-crds` and `linkerd-control-plane` on both clusters
+- installs `linkerd-multicluster` on both clusters
+- reserves MetalLB gateway IPs `192.168.50.241` and `192.168.50.246`
+- creates bidirectional multicluster links
+- runs Linkerd control plane and multicluster checks
+
+Verification:
+
+```bash
+linkerd --context cluster-a check
+linkerd --context cluster-b check
+linkerd --context cluster-a multicluster check
+linkerd --context cluster-b multicluster check
+linkerd --context cluster-a multicluster gateways
+linkerd --context cluster-b multicluster gateways
+```
+
+Do not delete `.secrets/linkerd/` while the clusters are still using this mesh.
+Regenerating the trust anchor means reinstalling Linkerd on both clusters
+together and restarting any meshed workloads.

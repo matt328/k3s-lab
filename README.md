@@ -405,6 +405,42 @@ curl -o /dev/null -s -w '%{http_code}\n' http://tempo.b.lab.home/v1/traces
 Expected Tempo result is `405` for a GET request; the OTLP/HTTP endpoint only
 accepts POST.
 
+## Phase 4: Linkerd control plane and multicluster
+
+Phase 4 installs Linkerd on both clusters and links them bidirectionally for
+later service mirroring:
+
+- Linkerd CRDs and control plane on cluster A and cluster B
+- one shared trust anchor with per-cluster issuer certificates
+- Linkerd multicluster extension and gateway on both clusters
+- bidirectional cluster links for future exported services
+
+This phase is script-managed rather than Argo-managed because Linkerd's Helm
+chart requires private identity issuer keys at render time. The script stores
+that material under `.secrets/linkerd/`, which is gitignored.
+
+```bash
+./scripts/bootstrap-linkerd.sh
+```
+
+Default Linkerd gateway `EXTERNAL-IP` values:
+
+```text
+cluster-a: 192.168.50.241
+cluster-b: 192.168.50.246
+```
+
+Verify:
+
+```bash
+linkerd --context cluster-a check
+linkerd --context cluster-b check
+linkerd --context cluster-a multicluster check
+linkerd --context cluster-b multicluster check
+linkerd --context cluster-a multicluster gateways
+linkerd --context cluster-b multicluster gateways
+```
+
 ## Clean rebuild smoke test
 
 This is the current end-to-end reproducibility check:
@@ -414,10 +450,13 @@ vagrant destroy -f
 ./scripts/up.sh
 ./scripts/fetch-kubeconfigs.sh
 ./scripts/bootstrap-argocd.sh
+./scripts/bootstrap-linkerd.sh
 
 kubectl --context cluster-a -n argocd get applications
 kubectl --context cluster-a -n traefik get svc traefik
 kubectl --context cluster-b -n traefik get svc traefik
+kubectl --context cluster-a -n linkerd-multicluster get svc linkerd-gateway
+kubectl --context cluster-b -n linkerd-multicluster get svc linkerd-gateway
 curl -I http://argocd.a.lab.home
 curl -I http://grafana.b.lab.home
 ```
@@ -427,5 +466,7 @@ Expected:
 - all Argo CD Applications are `Synced` / `Healthy`
 - cluster A Traefik has `EXTERNAL-IP` `192.168.50.240`
 - cluster B Traefik has `EXTERNAL-IP` `192.168.50.245`
+- cluster A Linkerd gateway has `EXTERNAL-IP` `192.168.50.241`
+- cluster B Linkerd gateway has `EXTERNAL-IP` `192.168.50.246`
 - `http://argocd.a.lab.home` returns `HTTP/1.1 200 OK`
 - `http://grafana.b.lab.home` returns `HTTP/1.1 302 Found` to `/login`
