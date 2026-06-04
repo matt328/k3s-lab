@@ -16,7 +16,7 @@ Primary goals:
 - Providers generate server interfaces from their published contracts.
 - Consumers generate clients from provider contracts.
 - Services depend on contracts and protocols, not each other's source code.
-- Runtime configuration is externalized and environment-specific.
+- Runtime configuration starts simple in Helm values and can evolve later.
 - Every service is observable by default.
 - Kubernetes deployment defaults are safe for Spring Boot workloads.
 - The same app topology can later be used for Linkerd multicluster migration.
@@ -83,9 +83,34 @@ Current implementation:
 - `demo-payment-service` has its own local `payments-api.yaml`, but that
   contract is not yet published as a reusable artifact.
 
-Decision: each service should own and publish its own API artifact. Order
-publishes an Order API artifact; Payment should publish a Payment API artifact
-before Order consumes Payment through generated code.
+Decision: each API artifact should live in its own repository.
+
+Order owns and publishes an Order API artifact; Payment should own and publish a
+Payment API artifact before Order consumes Payment through generated code. This
+fits the expected environment of dozens of APIs better than a central contract
+monorepo because each API can evolve, release, and grant ownership
+independently.
+
+Each API repository should still follow a shared standard so governance comes
+from conventions instead of from a monorepo:
+
+```text
+<api-name>/
+  openapi.yaml
+  build.gradle
+  gradle.properties
+  README.md
+  CHANGELOG.md
+```
+
+Expected API-repo responsibilities:
+
+- lint and validate the OpenAPI document
+- publish a versioned YAML artifact to Reposilite
+- generate server/client code as a compatibility smoke test
+- document breaking-change policy
+- publish release notes or changelog entries
+- expose artifact coordinates for consumers
 
 ## Runtime topology in this lab
 
@@ -114,7 +139,19 @@ cluster A order-service
 cluster A payment-service + cluster B payment-service
 ```
 
-or, if Order becomes the migration target:
+Decision: migrate Payment first.
+
+Payment is the leaf service in the initial `client -> order-service ->
+payment-service` call graph, so moving it first proves Linkerd east/west traffic
+shifting while avoiding unnecessary request paths that bounce from cluster A to
+cluster B and then back to cluster A.
+
+General migration principle: move leaf services first where practical. That
+minimizes awkward cross-cluster dependency loops and reduces the amount of
+traffic that enters cluster A only to traverse east/west to cluster B and back
+again.
+
+An Order migration can be added later:
 
 ```text
 cluster A payment-service
@@ -124,9 +161,8 @@ cluster A payment-service
 cluster A order-service + cluster B order-service
 ```
 
-The migration target should be selected before implementation, because Linkerd
-service mirroring exposes remote services under distinct names and the generated
-Feign client must be configured to call the intended Kubernetes service name.
+That later scenario would require revisiting service names, Linkerd service
+mirror usage, generated client configuration, and traffic-splitting design.
 
 ## Kubernetes deployment model
 
@@ -208,10 +244,20 @@ defaults for Spring Boot.
 
 ### Traces
 
+Decision: use application dependencies as the standard instrumentation model for
+the Spring reference services.
+
+The reference apps should include the Spring/Micrometer/OpenTelemetry
+dependencies directly instead of relying on the OpenTelemetry Java agent as the
+primary path. This keeps observability explicit in the app build, makes the
+examples easier to teach, and lets service owners version and customize their
+instrumentation deliberately. The Java agent can still be used later as a
+retrofit option for services that cannot be changed.
+
 Target:
 
-- use Micrometer Tracing with OpenTelemetry export, or the OpenTelemetry Java
-  agent if that becomes the preferred standard
+- include Micrometer Tracing with OpenTelemetry export dependencies
+- include the OTLP exporter dependency
 - send OTLP traces to Tempo
 - propagate W3C trace context across generated Feign clients
 - include spans for inbound HTTP requests, outbound service calls, and important
@@ -235,30 +281,29 @@ Grafana should eventually include dashboards for:
 
 ## Configuration model
 
-Short-term:
+Decision: defer dynamic configuration for now.
 
-- use environment variables and Kubernetes ConfigMaps/Secrets through Helm values
-- keep non-secret app config in Git
+The first Spring app implementation should embed application configuration in
+the deployment's Helm `values.yaml`. Those values can render environment
+variables, ConfigMaps, Secrets, annotations, and resource settings through the
+chart. This keeps Phase 5 focused on contracts, deployment, observability, and
+service-mesh behavior instead of introducing Spring Cloud Config, Spring Cloud
+Bus, reload semantics, or a message broker too early.
+
+Initial rules:
+
+- keep non-secret app config in Git-backed per-service values files
 - keep secrets out of Git unless a sealed/encrypted secret workflow is added
-- use profiles only for broad environment selection, not for every setting
+- use environment variables and chart-rendered ConfigMaps/Secrets as needed
+- use Spring profiles only for broad environment selection, not for every
+  setting
+- expect most config changes to roll out through Argo CD and Kubernetes
+  deployment updates
 
-Target direction:
-
-- Git-backed central config for app behavior
-- controlled runtime refresh for values that are safe to refresh
-- clear separation between app config, deployment config, and secrets
-
-Candidate approaches:
-
-| Option | Fit |
-| --- | --- |
-| Spring Cloud Config Server + Spring Cloud Bus | Strong Git-backed Spring-native model; needs a broker such as RabbitMQ or Kafka for broadcast refresh. |
-| Spring Cloud Kubernetes ConfigMap/Secret integration | More Kubernetes-native; fits GitOps-managed ConfigMaps but refresh semantics need careful validation. |
-| Argo CD-managed ConfigMaps plus pod restart/reloader | Operationally simple and GitOps-native, but does not satisfy restartless config refresh. |
-
-Important constraint: restartless refresh does not apply to every setting.
-Connection pools, ports, logging appenders, bean construction, and third-party
-client configuration may require explicit refresh-scoped beans or a pod rollout.
+Dynamic, restartless config can be revisited later as a separate architecture
+phase. That future decision has larger implications around which settings are
+safe to refresh, how refresh events are delivered, and where GitOps-managed
+deployment config ends versus application behavior config begins.
 
 ## Build and release model
 
@@ -287,12 +332,37 @@ persistent storage if builds and deployments depend on them across pod restarts.
 If the whole lab is torn down, artifacts and images can be rebuilt and repushed
 from source.
 
-Remaining decisions:
+Image deployment policy:
 
-- tag strategy
-- SBOM publishing
-- vulnerability scanning
-- how this repo references app image versions
+- Helm values must reference absolute immutable image versions.
+- The preferred values shape is repository, human-readable immutable tag, and
+  digest; rendered workloads should pin the digest.
+- Floating tags such as `latest`, mutable branch tags, or mutable environment
+  tags must not be deployed.
+- Tags published by the build must be immutable.
+- Publish both semantic-version tags and git-SHA tags when available.
+- Rollbacks happen by reverting the GitOps values file to a previous digest, not
+  by retagging an image.
+
+Example values shape:
+
+```yaml
+image:
+  repository: registry.b.lab.home/order-service
+  tag: 1.2.3
+  digest: sha256:...
+```
+
+Supply-chain metadata policy:
+
+- publish CycloneDX SBOMs alongside images as OCI artifacts/referrers
+- include useful OCI labels such as source repository, git SHA, app version,
+  build time, contract artifact versions, and SBOM location
+- scan images at build time
+- run Trivy Operator in the cluster for continuous workload visibility
+- block Critical vulnerabilities for now
+- warn on High vulnerabilities for now
+- revisit signing/provenance, such as cosign, after the base workflow is stable
 
 Current projects use AWS CodeArtifact for the OpenAPI artifact and Paketo
 `bootBuildImage` with `publish = false`, so the lab is not yet fully

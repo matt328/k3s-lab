@@ -25,7 +25,7 @@ Purpose: make the OpenAPI artifact model reproducible and explicit.
 
 Work items:
 
-- create or formalize one API artifact per service
+- create or formalize one repository per API artifact
 - publish Payment API as a reusable artifact before Payment becomes a provider
   consumed by Order
 - deploy Reposilite as the lab-local Maven-compatible artifact repository in
@@ -39,6 +39,7 @@ Acceptance criteria:
 
 - both services generate server/client code only from versioned per-service
   OpenAPI artifacts
+- each API artifact is published from its own repository
 - no service depends on another service's implementation source
 - a fresh build can resolve contracts from `http://maven.b.lab.home`
 
@@ -52,7 +53,7 @@ Work items for every service:
 - add Spring Boot Actuator
 - expose Kubernetes liveness and readiness health groups
 - expose Prometheus metrics
-- add tracing dependencies or OpenTelemetry Java agent support
+- add Micrometer Tracing and OpenTelemetry OTLP exporter dependencies
 - configure trace propagation through generated Feign clients
 - emit structured JSON logs with trace/span correlation fields
 - expose build, git, image, and contract version information through Actuator
@@ -111,6 +112,11 @@ Work items:
 - configure k3s nodes to pull from the HTTP lab registry
 - publish container images for both services to the lab-local registry
 - document the image publish command used by local builds and CI
+- publish immutable tags and deploy by digest from Helm values
+- publish CycloneDX SBOMs alongside images as OCI artifacts/referrers
+- add build-time image scanning that blocks Critical vulnerabilities and warns
+  on High vulnerabilities
+- plan Trivy Operator installation for in-cluster continuous scanning
 - create per-service values files in this repo
 - expose Order service through Traefik using HTTPRoute or Ingress
 - keep Payment service cluster-internal initially
@@ -126,6 +132,7 @@ Acceptance criteria:
 - Payment does not call Order in the first deployment
 - Linkerd shows meshed traffic between Order and Payment
 - Grafana has logs, metrics, and traces for a successful request
+- deployed images are pinned by digest in GitOps values
 
 ## Phase 5.5: observability tuning
 
@@ -148,51 +155,46 @@ Acceptance criteria:
 - failed requests are visible in logs, traces, and metrics
 - dashboards distinguish Order from Payment and cluster A from cluster B
 
-## Phase 5.6: dynamic configuration prototype
+## Deferred: dynamic configuration prototype
 
-Purpose: evaluate restartless config changes without conflating them with basic
-deployment.
+Purpose: explicitly defer restartless config changes until the base app platform
+is working.
 
-Work items:
+Current decision:
 
-- choose the config approach:
-  - Spring Cloud Config Server + Spring Cloud Bus
-  - Spring Cloud Kubernetes ConfigMap/Secret integration
-  - GitOps-managed ConfigMaps with rollout/reloader fallback
-- identify which settings are safe to refresh at runtime
-- add a small feature flag or timeout setting as the first refresh demo
-- document settings that still require pod rollout
-- define secret handling separately from non-secret config
+- put app configuration in each deployment's Helm `values.yaml`
+- render config through normal Kubernetes environment variables, ConfigMaps, and
+  Secrets
+- let Argo CD/Kubernetes rollouts apply config changes for now
+- do not introduce Spring Cloud Config, Spring Cloud Bus, or restartless reload
+  behavior in the first implementation
 
-Acceptance criteria:
+Later, revisit:
 
-- a selected non-secret config value can be changed through Git or the chosen
-  config source
-- running pods observe the change without a manual restart when the setting is
-  marked refreshable
-- non-refreshable settings are clearly documented and rolled out safely
+- which settings are safe to refresh at runtime
+- whether Spring Cloud Config Server, Spring Cloud Kubernetes, or another model
+  is the right fit
+- whether a broker such as RabbitMQ or Kafka is worth adding for config refresh
+- how dynamic app config should coexist with GitOps-managed deployment config
 
 ## Phase 6+: multicluster migration demo
 
 Purpose: reuse the real Spring services for the original migration narrative.
-
-Before implementation, choose the migration target:
-
-- migrate Payment while Order remains the ingress-facing orchestrator, or
-- migrate Order while Payment exercises generated client calls to mirrored Order
+Payment is the first migration target because it is the leaf service behind
+Order in the initial call graph.
 
 Work items:
 
-- deploy the migration target service to cluster B
-- export the service with Linkerd multicluster
-- configure the caller to target the correct local or mirrored service name
+- deploy Payment service to cluster B
+- export Payment with Linkerd multicluster
+- configure Order to target the correct local or mirrored Payment service name
 - introduce explicit traffic-splitting resources or a stable parent service
-- shift traffic gradually from cluster A to cluster B
+- shift Payment traffic gradually from cluster A to cluster B
 - validate traces, logs, and metrics across the shift
 
 Acceptance criteria:
 
-- both clusters serve the selected backend during the overlap phase
+- both clusters serve Payment during the overlap phase
 - traffic weights can be changed deliberately and observed in Grafana
 - no callers use hard-coded IPs
 - cross-cluster failures are visible and recoverable

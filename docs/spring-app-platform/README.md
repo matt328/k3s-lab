@@ -12,7 +12,7 @@ demonstrate production-shaped Spring services with:
 - GitOps-managed Kubernetes deployment
 - Linkerd service mesh readiness for later cross-cluster migration
 - first-class logs, metrics, traces, health checks, and dashboards
-- a path toward dynamic Git-backed configuration
+- simple per-deployment Helm values first, with dynamic configuration deferred
 
 ## Source projects
 
@@ -55,8 +55,7 @@ Important gaps to close before treating these as reference implementations:
   service, deployment, observability, configuration, and migration model.
 - [Migration plan](migration-plan.md) breaks the path from today's projects to
   the reference architecture into executable phases.
-- [Open questions](open-questions.md) tracks decisions that should be answered
-  before implementation details are locked in.
+- [Open questions](open-questions.md) tracks the remaining unresolved decisions.
 
 ## Working assumptions
 
@@ -68,5 +67,5 @@ Important gaps to close before treating these as reference implementations:
   Linkerd service mirror names, not hard-coded pod IPs.
 - The first app phase should prefer clarity and observability over feature
   richness.
-- Dynamic configuration should be designed deliberately; not every Spring Boot
-  setting is safely refreshable without a pod restart.
+- Dynamic configuration is deferred; app config should live in the deployment's
+  Helm `values.yaml` until the base platform is stable.
