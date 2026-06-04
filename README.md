@@ -598,7 +598,7 @@ annotations, and exposes Order through Traefik at `http://order.a.lab.home`.
 The currently pinned image is:
 
 ```text
-registry.b.lab.home/k3s-lab/order-service:0.1.0-cloud-native.20260604182139@sha256:3d1442f9343f7c8a97d15a7d9b6ba9bf092451306cb72a7d38eae4b6f5bd172b
+registry.b.lab.home/k3s-lab/order-service:0.1.0-cloud-native.8915333@sha256:6b8cbc254b6b89d19c408a22524bedcd6bfaa5e02234ffe750ea93f974b3faf8
 ```
 
 ## Clean rebuild smoke test
