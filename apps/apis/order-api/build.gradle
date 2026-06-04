@@ -1,0 +1,106 @@
+plugins {
+  id "java"
+  id "maven-publish"
+}
+
+group = "dev.teeter.demos.apis"
+description = "OpenAPI specification for the Order service"
+
+def releaseVersion = providers.gradleProperty("version").get()
+version = releaseVersion
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(providers.gradleProperty("javaVersion").get().toInteger())
+  }
+}
+
+tasks.register("validateOpenApi") {
+  def sourceFile = file("order-api.yaml")
+
+  inputs.file(sourceFile)
+
+  doLast {
+    def content = sourceFile.text
+    def requiredSnippets = [
+      "openapi: 3.0.3",
+      "info:",
+      "paths:",
+      "/orders/{id}:",
+      "components:",
+      "Order:"
+    ]
+
+    requiredSnippets.each { snippet ->
+      if (!content.contains(snippet)) {
+        throw new GradleException("order-api.yaml is missing required OpenAPI content: ${snippet}")
+      }
+    }
+  }
+}
+
+tasks.register("prepareOpenApi") {
+  def sourceFile = file("order-api.yaml")
+  def targetFile = file("${buildDir}/generated/order-api.yaml")
+
+  inputs.file(sourceFile)
+  inputs.property("version", releaseVersion)
+  outputs.file(targetFile)
+
+  dependsOn(tasks.named("validateOpenApi"))
+
+  doLast {
+    def content = sourceFile.text.replaceFirst(
+      /version:\s*["']?[\w.\-+]+["']?/,
+      "version: ${releaseVersion}"
+    )
+    targetFile.parentFile.mkdirs()
+    targetFile.text = content
+  }
+}
+
+publishing {
+  publications {
+    maven(MavenPublication) {
+      groupId = project.group
+      artifactId = "order-api-spec"
+      version = releaseVersion
+
+      artifact(tasks.named("prepareOpenApi").get().outputs.files.singleFile) {
+        builtBy tasks.named("prepareOpenApi")
+        extension = "yaml"
+      }
+
+      pom {
+        packaging = "yaml"
+        name.set("Order API Specification")
+        description.set("OpenAPI specification for the Order service")
+      }
+    }
+  }
+
+  repositories {
+    maven {
+      def repositoryUrl = providers.gradleProperty("mavenRepositoryUrl")
+        .orElse(providers.environmentVariable("MAVEN_REPOSITORY_URL"))
+        .orElse("http://maven.b.lab.home/releases")
+        .get()
+
+      name = "lab"
+      url = uri(repositoryUrl)
+      allowInsecureProtocol = repositoryUrl.startsWith("http://")
+
+      credentials {
+        username = providers.gradleProperty("mavenRepositoryUsername")
+          .orElse(providers.environmentVariable("MAVEN_REPOSITORY_USERNAME"))
+          .orElse("")
+          .get()
+        password = providers.gradleProperty("mavenRepositoryPassword")
+          .orElse(providers.environmentVariable("MAVEN_REPOSITORY_PASSWORD"))
+          .orElse("")
+          .get()
+      }
+    }
+  }
+}
+

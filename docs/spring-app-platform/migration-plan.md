@@ -25,7 +25,9 @@ Purpose: make the OpenAPI artifact model reproducible and explicit.
 
 Work items:
 
-- create or formalize one repository per API artifact
+- vendor Order API into `apps/apis/order-api` as the first self-contained lab
+  API artifact project
+- simulate one-repository-per-API CI locally with `scripts/ci-order-api.sh`
 - publish Payment API as a reusable artifact before Payment becomes a provider
   consumed by Order
 - deploy Reposilite as the lab-local Maven-compatible artifact repository in

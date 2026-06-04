@@ -25,6 +25,9 @@ The initial application inputs live outside this repo:
 | `/home/matt/Projects/demo/spring-demos/demo-payment-service`       | Generates the Payment service server from its local `payments-api.yaml` and an Order client from `order-api-spec`. |
 | `/home/matt/Projects/demo/k8s/helm-charts/helm-charts-spring-boot` | Generic Spring Boot Helm chart that will be modernized before becoming the deployment standard.                    |
 
+The Order API has been vendored into this lab at `apps/apis/order-api` so local
+scripts can simulate the CI publish flow against `maven.b.lab.home`.
+
 ## Current-state snapshot
 
 The current projects already demonstrate the beginning of the desired pattern:

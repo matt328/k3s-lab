@@ -521,6 +521,30 @@ skopeo copy --dest-tls-verify=false \
   docker://registry.b.lab.home/k3s-lab/registry-probe:busybox
 ```
 
+## Phase 5.3: Order API CI simulation
+
+The Order API contract project is vendored under:
+
+```text
+apps/apis/order-api
+```
+
+This keeps the lab self-contained while preserving the target architecture of
+one repository per API artifact. The checked-in Gradle wrapper publishes
+`dev.teeter.demos.apis:order-api-spec:<version>@yaml` to Reposilite.
+
+Simulate a feature-branch publish:
+
+```bash
+./scripts/ci-order-api.sh feature feature/order-api-change
+```
+
+Simulate a main-branch release:
+
+```bash
+./scripts/ci-order-api.sh main
+```
+
 ## Clean rebuild smoke test
 
 This is the current end-to-end reproducibility check:
