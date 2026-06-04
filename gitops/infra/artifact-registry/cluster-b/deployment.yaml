@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reposilite
+  labels:
+    app.kubernetes.io/name: reposilite
+    app.kubernetes.io/component: artifact-registry
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reposilite
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reposilite
+        app.kubernetes.io/component: artifact-registry
+    spec:
+      containers:
+        - name: reposilite
+          image: ghcr.io/dzikoysk/reposilite:3.5.28
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: JAVA_OPTS
+              value: "-Xmx384M"
+            - name: REPOSILITE_OPTS
+              valueFrom:
+                secretKeyRef:
+                  name: reposilite-bootstrap-token
+                  key: REPOSILITE_OPTS
+                  optional: true
+          ports:
+            - name: http
+              containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: reposilite-data
+

@@ -184,3 +184,52 @@ linkerd --context cluster-b multicluster gateways
 Do not delete `.secrets/linkerd/` while the clusters are still using this mesh.
 Regenerating the trust anchor means reinstalling Linkerd on both clusters
 together and restarting any meshed workloads.
+
+## Phase 5: Spring Boot reference applications
+
+Phase 5 has expanded from a generic `frontend -> backend` smoke test into a
+Spring Boot application-platform reference architecture.
+
+The initial application candidates live outside this repo:
+
+- `/home/matt/Projects/demo/spring-demos/openapi-demo-order-service`
+- `/home/matt/Projects/demo/spring-demos/demo-order-service`
+- `/home/matt/Projects/demo/spring-demos/demo-payment-service`
+- `/home/matt/Projects/demo/k8s/helm-charts/helm-charts-spring-boot`
+
+The intended direction is:
+
+- publish OpenAPI contracts as versioned artifacts
+- generate provider server interfaces and consumer clients from those contracts
+- deploy `order-service -> payment-service` to cluster A first
+- modernize the Spring Boot Helm chart before relying on it
+- tune the existing Loki, Tempo, Prometheus, Grafana, and Alloy stack around the
+  real application behavior
+- later reuse the same services for Linkerd multicluster service mirroring and
+  traffic shifting
+
+Planning now lives in `docs/spring-app-platform/`.
+
+### Phase 5.1: lab-local Maven artifact registry
+
+The first implementation step is a Maven-compatible artifact repository for
+OpenAPI contract artifacts. The lab uses Reposilite in cluster B at
+`http://maven.b.lab.home`.
+
+Reposilite stores data on a `local-path` PVC. Artifacts survive pod restarts,
+but the registry is disposable with the rest of the lab and does not need to
+survive `vagrant destroy`.
+
+The write token is generated locally and applied as a Kubernetes Secret instead
+of being committed:
+
+```bash
+./scripts/bootstrap-artifact-registry.sh
+```
+
+Verify:
+
+```bash
+kubectl --context cluster-b -n artifact-registry get pods,pvc,ingress
+curl -I http://maven.b.lab.home
+```

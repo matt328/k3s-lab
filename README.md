@@ -257,15 +257,17 @@ script so the whole sequence is replayable.
 | 2     | Argo CD installs MetalLB and Traefik on both clusters; Argo CD gets LAN ingress             |
 | 3     | Install MinIO + observability stack on cluster B; install Alloy agents on both clusters     |
 | 4     | Install Linkerd control plane + multicluster on both clusters                               |
-| 5     | Deploy `frontend → backend` sample apps to cluster A only                                   |
-| 6     | Deploy `backend` to cluster B too; export it via Linkerd service mirror                     |
-| 7     | Weighted east/west traffic shift for `backend`: 100/0 → 75/25 → 50/50 → 25/75 → 0/100       |
-| 8     | Remove `backend` from cluster A                                                             |
+| 5     | Deploy Spring Boot `order-service → payment-service` reference apps to cluster A            |
+| 6     | Deploy the selected backend service to cluster B; export it via Linkerd service mirror      |
+| 7     | Weighted east/west traffic shift for the selected backend service                           |
+| 8     | Remove the migrated backend service from cluster A                                          |
 | 9     | Install Argo CD on cluster B; orphan apps from A's Argo; adopt in B's Argo; delete A's Argo |
 | 10    | DNS cutover: point ingress hostnames at cluster B (manual, on your local resolver)          |
 | 11    | Halt cluster A VMs                                                                          |
 
-See `docs/phase-walkthrough.md` for the narrative version (forthcoming).
+See `docs/phase-walkthrough.md` for the narrative version and
+`docs/spring-app-platform/` for the expanded Spring Boot application-platform
+plan.
 
 ## Phase 1: Bootstrap Argo CD
 
@@ -441,6 +443,43 @@ linkerd --context cluster-a multicluster gateways
 linkerd --context cluster-b multicluster gateways
 ```
 
+## Phase 5.1: Lab-local Maven artifact registry
+
+The Spring reference-app phases use a lab-local Maven-compatible repository for
+OpenAPI contract artifacts. This avoids depending on an interactive
+CodeArtifact token while keeping the lab disposable.
+
+Reposilite runs in **cluster B**:
+
+```text
+URL:       http://maven.b.lab.home
+releases:  http://maven.b.lab.home/releases
+snapshots: http://maven.b.lab.home/snapshots
+```
+
+The registry uses a `local-path` PVC, so artifacts survive pod restarts but are
+not expected to survive `vagrant destroy`.
+
+Create or refresh the local admin token Secret:
+
+```bash
+./scripts/bootstrap-artifact-registry.sh
+```
+
+The generated token is stored under `.secrets/reposilite/`, which is ignored by
+git. The registry manifests are GitOps-managed from:
+
+```text
+gitops/infra/artifact-registry/cluster-b
+```
+
+Verify:
+
+```bash
+kubectl --context cluster-b -n artifact-registry get pods,pvc,ingress
+curl -I http://maven.b.lab.home
+```
+
 ## Clean rebuild smoke test
 
 This is the current end-to-end reproducibility check:
@@ -450,14 +489,17 @@ vagrant destroy -f
 ./scripts/up.sh
 ./scripts/fetch-kubeconfigs.sh
 ./scripts/bootstrap-argocd.sh
+./scripts/bootstrap-artifact-registry.sh
 ./scripts/bootstrap-linkerd.sh
 
 kubectl --context cluster-a -n argocd get applications
 kubectl --context cluster-a -n traefik get svc traefik
 kubectl --context cluster-b -n traefik get svc traefik
+kubectl --context cluster-b -n artifact-registry get pods,pvc,ingress
 kubectl --context cluster-a -n linkerd-multicluster get svc linkerd-gateway
 kubectl --context cluster-b -n linkerd-multicluster get svc linkerd-gateway
 curl -I http://argocd.a.lab.home
+curl -I http://maven.b.lab.home
 curl -I http://grafana.b.lab.home
 ```
 
@@ -466,6 +508,7 @@ Expected:
 - all Argo CD Applications are `Synced` / `Healthy`
 - cluster A Traefik has `EXTERNAL-IP` `192.168.50.240`
 - cluster B Traefik has `EXTERNAL-IP` `192.168.50.245`
+- Reposilite is reachable at `http://maven.b.lab.home`
 - cluster A Linkerd gateway has `EXTERNAL-IP` `192.168.50.241`
 - cluster B Linkerd gateway has `EXTERNAL-IP` `192.168.50.246`
 - `http://argocd.a.lab.home` returns `HTTP/1.1 200 OK`

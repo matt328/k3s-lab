@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: artifact-registry-cluster-b
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "40"
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/matt328/k3s-lab.git
+    targetRevision: main
+    path: gitops/infra/artifact-registry/cluster-b
+  destination:
+    name: cluster-b
+    namespace: artifact-registry
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
