@@ -1,0 +1,14 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-service
+  namespace: spring-demo
+  labels:
+    app.kubernetes.io/name: payment-service
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: spring-demo
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: payment-service

@@ -28,13 +28,14 @@ The initial application inputs live outside this repo:
 The Order API has been vendored into this lab at `apps/apis/order-api` so local
 scripts can simulate the CI publish flow against `maven.b.lab.home`.
 
-The Order service has been vendored into this lab at
-`apps/services/order-service` so local scripts can simulate image publishing to
-`registry.b.lab.home`. It now includes the first cloud-native Spring baseline:
-Actuator probes, Prometheus metrics, Micrometer/OpenTelemetry tracing, JSON
-logs, graceful shutdown, bounded Feign timeouts, and Actuator build/Git/contract
-metadata. The image publish simulation uses Jib through the Gradle wrapper, so
-it does not require a local Docker daemon.
+The Order and Payment services have been vendored into this lab at
+`apps/services/order-service` and `apps/services/payment-service` so local
+scripts can simulate image publishing to `registry.b.lab.home`. They now include
+the cloud-native Spring baseline: Actuator probes, Prometheus metrics,
+Micrometer/OpenTelemetry tracing, JSON logs, graceful shutdown, bounded Feign
+timeouts, and Actuator build/Git/contract metadata. The image publish
+simulations use Jib through the Gradle wrapper, so they do not require a local
+Docker daemon.
 
 ## Current-state snapshot
 
@@ -42,23 +43,20 @@ The current projects already demonstrate the beginning of the desired pattern:
 
 - the Order API is published separately from either runtime service
 - Order service generates its server delegate interface from that artifact
-- Payment service generates an Order Feign client from that same artifact
-- Payment service also generates its own server API from a local OpenAPI file
+- the Payment API is published separately as a reusable artifact
+- Payment service generates its server delegate interface from the Payment API
+- Order service generates a Payment Feign client from the Payment API artifact
 - the Helm chart supports Deployment, Service, Ingress, HTTPRoute, and HPA
 
 Important gaps to close before treating these as reference implementations:
 
-- Payment does not yet include the full cloud-native baseline
-- Payment does not yet expose Prometheus metrics
-- Payment does not yet emit application traces to Tempo
-- Payment exposes only the health actuator endpoint
 - the chart's default probes are not rendered because the template checks
   `.Values.*Probe.enabled`, but the values file does not define `enabled`
 - fixing probe rendering before adding Actuator health groups would make the
   Order deployment fail readiness/liveness checks
 - the OpenAPI artifact currently resolves from AWS CodeArtifact, so the lab
   needs a reproducible artifact access strategy
-- the first Order deployment uses raw Kustomize until the reusable Spring Boot
+- the first service deployments use raw Kustomize until the reusable Spring Boot
   Helm chart is modernized
 
 ## Planning documents

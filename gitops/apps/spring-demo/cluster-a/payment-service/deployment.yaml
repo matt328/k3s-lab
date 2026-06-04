@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: order-service
+  name: payment-service
   namespace: spring-demo
   labels:
-    app.kubernetes.io/name: order-service
+    app.kubernetes.io/name: payment-service
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: spring-demo
     app.kubernetes.io/version: 0.1.0-cloud-native.6cfb39d
@@ -17,7 +17,7 @@ spec:
       maxUnavailable: 0
   selector:
     matchLabels:
-      app.kubernetes.io/name: order-service
+      app.kubernetes.io/name: payment-service
   template:
     metadata:
       annotations:
@@ -26,25 +26,21 @@ spec:
         prometheus.io/path: /actuator/prometheus
         prometheus.io/port: "8080"
       labels:
-        app.kubernetes.io/name: order-service
+        app.kubernetes.io/name: payment-service
         app.kubernetes.io/component: api
         app.kubernetes.io/part-of: spring-demo
         app.kubernetes.io/version: 0.1.0-cloud-native.6cfb39d
     spec:
       terminationGracePeriodSeconds: 45
       containers:
-        - name: order-service
-          image: registry.b.lab.home/k3s-lab/order-service:0.1.0-cloud-native.6cfb39d@sha256:8385fd89b17da1fcb9b11706bd135517e7f042562a7dbcfacdfbe97da7d3bf41
+        - name: payment-service
+          image: registry.b.lab.home/k3s-lab/payment-service:0.1.0-cloud-native.6cfb39d@sha256:b0e4ca33fe2d13bddead00447bf249f04e3bd78e4fe9ca311121abd9b300806f
           imagePullPolicy: IfNotPresent
           env:
             - name: APP_ENVIRONMENT
               value: lab
-            - name: ORDER_API_VERSION
-              value: 0.1.0
             - name: PAYMENT_API_VERSION
               value: 0.1.0
-            - name: PAYMENT_SERVICE_URL
-              value: http://payment-service
             - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
               value: http://tempo.b.lab.home/v1/traces
             - name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
@@ -95,7 +91,7 @@ spec:
           whenUnsatisfiable: ScheduleAnyway
           labelSelector:
             matchLabels:
-              app.kubernetes.io/name: order-service
+              app.kubernetes.io/name: payment-service
       volumes:
         - name: tmp
           emptyDir: {}

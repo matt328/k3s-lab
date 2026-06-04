@@ -74,14 +74,17 @@ Rules:
 - Runtime service version and contract artifact version should be visible in
   `/actuator/info`, logs, metrics labels, and image metadata.
 
-Current implementation:
+Current lab implementation:
 
-- `openapi-demo-order-service` publishes `order-api.yaml` as
+- `apps/apis/order-api` publishes `order-api.yaml` as
   `dev.teeter.demos.apis:order-api-spec`.
-- `demo-order-service` uses that artifact to generate its server API.
-- `demo-payment-service` uses that artifact to generate an Order Feign client.
-- `demo-payment-service` has its own local `payments-api.yaml`, but that
-  contract is not yet published as a reusable artifact.
+- `apps/apis/payment-api` publishes `payment-api.yaml` as
+  `dev.teeter.demos.apis:payment-api-spec`.
+- `apps/services/order-service` uses the Order API artifact to generate its
+  server API and the Payment API artifact to generate a Feign client.
+- `apps/services/payment-service` uses the Payment API artifact to generate its
+  server API.
+- Payment does not call Order in the initial topology.
 
 Decision: each API artifact should live in its own repository.
 

@@ -545,28 +545,30 @@ Simulate a main-branch release:
 ./scripts/ci-order-api.sh main
 ```
 
-## Phase 5.4: Order service cloud-native baseline and deployment
+## Phase 5.4: Spring service cloud-native baseline and deployment
 
-The Order service is vendored under:
+The first Spring services are vendored under:
 
 ```text
 apps/services/order-service
+apps/services/payment-service
 ```
 
-The service includes the first Spring cloud-native baseline:
+Both services include the Spring cloud-native baseline:
 
 - Actuator health groups for Kubernetes startup, readiness, and liveness probes
 - Prometheus metrics at `/actuator/prometheus`
 - Micrometer Tracing with OpenTelemetry OTLP export to Tempo
 - structured JSON stdout logs with Micrometer trace/span MDC fields for Loki
 - graceful shutdown and bounded Feign client timeout defaults
-- Actuator build, Git, image, and Order API contract metadata
+- Actuator build, Git, image, and API contract metadata
 
-The local CI simulation resolves the Order API artifact from Reposilite, builds
-with the service's Gradle wrapper, and publishes with Jib to:
+The local CI simulations resolve OpenAPI artifacts from Reposilite, build with
+each service's Gradle wrapper, and publish with Jib to:
 
 ```text
 registry.b.lab.home/k3s-lab/order-service
+registry.b.lab.home/k3s-lab/payment-service
 ```
 
 Jib pushes directly to the registry, so this script does not require a local
@@ -576,29 +578,35 @@ Simulate a feature-branch image publish:
 
 ```bash
 ./scripts/ci-order-service.sh feature feature/order-service-build
+./scripts/ci-payment-service.sh feature feature/payment-service-build
 ```
 
 Simulate a main-branch image release:
 
 ```bash
 ./scripts/ci-order-service.sh main
+./scripts/ci-payment-service.sh main
 ```
 
-The first cluster A deployment is checked in under:
+The cluster A deployments are checked in under:
 
 ```text
 gitops/apps/spring-demo/cluster-a/order-service
+gitops/apps/spring-demo/cluster-a/payment-service
 ```
 
-It is intentionally a small raw Kustomize workload until the reusable Spring
-Boot Helm chart is modernized. The Deployment pins the image by digest, enables
-Linkerd injection on the pod template, adds Alloy-compatible Prometheus scrape
-annotations, and exposes Order through Traefik at `http://order.a.lab.home`.
+They are intentionally small raw Kustomize workloads until the reusable Spring
+Boot Helm chart is modernized. The Deployments pin images by digest, enable
+Linkerd injection on the pod template, and add Alloy-compatible Prometheus
+scrape annotations. Order is exposed through Traefik at
+`http://order.a.lab.home`; Payment is cluster-internal and is called by Order at
+`http://payment-service`.
 
-The currently pinned image is:
+The currently pinned images are:
 
 ```text
-registry.b.lab.home/k3s-lab/order-service:0.1.0-cloud-native.dfd13eb@sha256:d13acdda86d92aff40cebdf826efa449786c7108dd481549d2a635c291dc50e7
+registry.b.lab.home/k3s-lab/order-service:0.1.0-cloud-native.6cfb39d@sha256:8385fd89b17da1fcb9b11706bd135517e7f042562a7dbcfacdfbe97da7d3bf41
+registry.b.lab.home/k3s-lab/payment-service:0.1.0-cloud-native.6cfb39d@sha256:b0e4ca33fe2d13bddead00447bf249f04e3bd78e4fe9ca311121abd9b300806f
 ```
 
 ## Clean rebuild smoke test
