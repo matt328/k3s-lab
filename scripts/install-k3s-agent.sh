@@ -3,7 +3,7 @@
 #
 # Required env: K3S_TOKEN, MASTER_IP, NODE_IP
 # Optional env: NODE_LABELS (comma-separated k3s node labels), FLANNEL_IFACE
-# (default: eth1)
+# (default: eth1), LAB_OCI_REGISTRY_HOST
 set -euo pipefail
 
 : "${K3S_TOKEN:?}"
@@ -36,9 +36,27 @@ if ! cmp -s "${desired_config}" /etc/rancher/k3s/config.yaml 2>/dev/null; then
 fi
 rm -f "${desired_config}"
 
+registries_changed=false
+if [ -n "${LAB_OCI_REGISTRY_HOST:-}" ]; then
+  desired_registries="$(mktemp)"
+  cat >"${desired_registries}" <<EOF
+# Managed by scripts/install-k3s-agent.sh. Edit and re-install to change.
+mirrors:
+  "${LAB_OCI_REGISTRY_HOST}":
+    endpoint:
+      - "http://${LAB_OCI_REGISTRY_HOST}"
+EOF
+
+  if ! cmp -s "${desired_registries}" /etc/rancher/k3s/registries.yaml 2>/dev/null; then
+    install -m 0644 "${desired_registries}" /etc/rancher/k3s/registries.yaml
+    registries_changed=true
+  fi
+  rm -f "${desired_registries}"
+fi
+
 if [ -x /usr/local/bin/k3s ]; then
   echo "k3s already installed; skipping install"
-  if [ "${config_changed}" = true ]; then
+  if [ "${config_changed}" = true ] || [ "${registries_changed}" = true ]; then
     echo "k3s agent config changed; restarting k3s-agent"
     systemctl restart k3s-agent
   fi

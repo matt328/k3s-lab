@@ -233,3 +233,35 @@ Verify:
 kubectl --context cluster-b -n artifact-registry get pods,pvc,ingress
 curl -I http://maven.b.lab.home
 ```
+
+### Phase 5.2: lab-local OCI image registry
+
+Spring application images are published to a disposable OCI registry in cluster
+B at `registry.b.lab.home`.
+
+The registry uses `local-path` PVC storage. Images survive registry pod restarts
+but do not need to survive a full lab teardown. It is HTTP-only and
+unauthenticated for this LAN lab.
+
+k3s nodes need containerd registry mirror configuration before they can pull
+images from the HTTP endpoint. Provisioned nodes get that config automatically;
+for existing nodes, run:
+
+```bash
+./scripts/configure-oci-registry-nodes.sh
+```
+
+Verify:
+
+```bash
+kubectl --context cluster-b -n container-registry get pods,pvc,ingress
+curl -I http://registry.b.lab.home/v2/
+```
+
+Example publish command:
+
+```bash
+skopeo copy --dest-tls-verify=false \
+  docker://docker.io/library/busybox:1.37.0 \
+  docker://registry.b.lab.home/k3s-lab/registry-probe:busybox
+```

@@ -72,6 +72,7 @@ NETWORK = {
 }
 
 GATEWAY_API_VERSION = cfg("GATEWAY_API_VERSION")
+LAB_OCI_REGISTRY_HOST = cfg("LAB_OCI_REGISTRY_HOST")
 VM_VCPUS     = cfg("VM_VCPUS").to_i
 VM_MEMORY_MB = cfg("VM_MEMORY_MB").to_i
 
@@ -175,6 +176,7 @@ Vagrant.configure("2") do |config|
             "K3S_TOKEN"           => CLUSTER_TOKENS[node[:cluster]],
             "NODE_IP"             => node[:ip],
             "GATEWAY_API_VERSION" => GATEWAY_API_VERSION,
+            "LAB_OCI_REGISTRY_HOST" => LAB_OCI_REGISTRY_HOST,
           }
       else
         vm.vm.provision "shell",
@@ -185,6 +187,7 @@ Vagrant.configure("2") do |config|
             "MASTER_IP" => MASTER_IPS[node[:cluster]],
             "NODE_IP"   => node[:ip],
             "NODE_LABELS" => node_labels(node),
+            "LAB_OCI_REGISTRY_HOST" => LAB_OCI_REGISTRY_HOST,
           }
       end
     end

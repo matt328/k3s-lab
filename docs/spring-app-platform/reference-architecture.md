@@ -279,7 +279,8 @@ The lab will use cluster-local repository services:
 
 - Reposilite as a simple Maven-compatible artifact repository for OpenAPI spec
   artifacts
-- a simple OCI image registry for Spring Boot application images
+- a simple OCI image registry at `registry.b.lab.home` for Spring Boot
+  application images
 
 These services can be single-replica and lab-grade, but they should use
 persistent storage if builds and deployments depend on them across pod restarts.
@@ -288,7 +289,6 @@ from source.
 
 Remaining decisions:
 
-- exact OCI registry implementation
 - tag strategy
 - SBOM publishing
 - vulnerability scanning

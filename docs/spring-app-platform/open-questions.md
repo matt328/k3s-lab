@@ -51,12 +51,12 @@ artifacts through pod restarts, but it is disposable with the lab.
 
 ## Image registry and deployment flow
 
-Decision: deploy a lab-local OCI image registry into the cluster for app images.
+Decision: deploy a lab-local OCI image registry into cluster B for app images.
 
-The image registry can also be simple and single-replica. Like the Maven
-repository, it should use persistent storage if it is expected to survive pod
-restarts. If the cluster is torn down, images can be rebuilt and repushed as
-part of the lab workflow.
+The registry is exposed at `registry.b.lab.home`. It is simple,
+single-replica, HTTP-only, and unauthenticated for the LAN lab. Like the Maven
+repository, it uses persistent storage for pod restarts. If the cluster is torn
+down, images can be rebuilt and repushed as part of the lab workflow.
 
 The current service builds use Paketo `bootBuildImage` with `publish = false`,
 so image publishing still needs to be added before Argo CD can deploy these apps

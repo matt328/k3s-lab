@@ -10,6 +10,7 @@ resources:
   - applications/traefik-cluster-b.yaml
   - applications/argocd-ingress-cluster-a.yaml
   - applications/artifact-registry-cluster-b.yaml
+  - applications/container-registry-cluster-b.yaml
   - applications/minio-cluster-b.yaml
   - applications/loki-cluster-b.yaml
   - applications/tempo-cluster-b.yaml

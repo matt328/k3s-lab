@@ -3,7 +3,7 @@
 # (both are GitOps-managed) and install the Gateway API standard CRDs.
 #
 # Required env: K3S_TOKEN, NODE_IP, GATEWAY_API_VERSION
-# Optional env: FLANNEL_IFACE (default: eth1)
+# Optional env: FLANNEL_IFACE (default: eth1), LAB_OCI_REGISTRY_HOST
 #
 # Server config is reconciled on every provision run. If it changes after k3s is
 # already installed, the service is restarted so the new config is applied.
@@ -34,6 +34,24 @@ if ! cmp -s "${desired_config}" /etc/rancher/k3s/config.yaml 2>/dev/null; then
 fi
 rm -f "${desired_config}"
 
+registries_changed=false
+if [ -n "${LAB_OCI_REGISTRY_HOST:-}" ]; then
+  desired_registries="$(mktemp)"
+  cat >"${desired_registries}" <<EOF
+# Managed by scripts/install-k3s-server.sh. Edit and re-install to change.
+mirrors:
+  "${LAB_OCI_REGISTRY_HOST}":
+    endpoint:
+      - "http://${LAB_OCI_REGISTRY_HOST}"
+EOF
+
+  if ! cmp -s "${desired_registries}" /etc/rancher/k3s/registries.yaml 2>/dev/null; then
+    install -m 0644 "${desired_registries}" /etc/rancher/k3s/registries.yaml
+    registries_changed=true
+  fi
+  rm -f "${desired_registries}"
+fi
+
 if ! [ -x /usr/local/bin/k3s ]; then
   curl -sfL https://get.k3s.io | \
     K3S_TOKEN="${K3S_TOKEN}" \
@@ -42,7 +60,7 @@ if ! [ -x /usr/local/bin/k3s ]; then
   systemctl enable --now k3s
 else
   echo "k3s already installed; skipping install"
-  if [ "${config_changed}" = true ]; then
+  if [ "${config_changed}" = true ] || [ "${registries_changed}" = true ]; then
     echo "k3s config changed; restarting k3s"
     systemctl restart k3s
   fi

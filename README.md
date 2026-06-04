@@ -480,6 +480,47 @@ kubectl --context cluster-b -n artifact-registry get pods,pvc,ingress
 curl -I http://maven.b.lab.home
 ```
 
+## Phase 5.2: Lab-local OCI image registry
+
+Spring app images are published to a lab-local OCI registry in **cluster B**:
+
+```text
+registry.b.lab.home
+```
+
+The registry is intentionally HTTP-only and unauthenticated for this LAN lab. It
+uses a `local-path` PVC, so images survive pod restarts but are rebuilt and
+repushed after `vagrant destroy`.
+
+k3s containerd must be configured to pull from this HTTP registry. New or
+reprovisioned nodes get `/etc/rancher/k3s/registries.yaml` from the k3s install
+provisioners. For already-running nodes, run:
+
+```bash
+./scripts/configure-oci-registry-nodes.sh
+```
+
+The registry manifests are GitOps-managed from:
+
+```text
+gitops/infra/container-registry/cluster-b
+```
+
+Verify:
+
+```bash
+kubectl --context cluster-b -n container-registry get pods,pvc,ingress
+curl -I http://registry.b.lab.home/v2/
+```
+
+Example publish command:
+
+```bash
+skopeo copy --dest-tls-verify=false \
+  docker://docker.io/library/busybox:1.37.0 \
+  docker://registry.b.lab.home/k3s-lab/registry-probe:busybox
+```
+
 ## Clean rebuild smoke test
 
 This is the current end-to-end reproducibility check:
@@ -490,16 +531,19 @@ vagrant destroy -f
 ./scripts/fetch-kubeconfigs.sh
 ./scripts/bootstrap-argocd.sh
 ./scripts/bootstrap-artifact-registry.sh
+./scripts/configure-oci-registry-nodes.sh
 ./scripts/bootstrap-linkerd.sh
 
 kubectl --context cluster-a -n argocd get applications
 kubectl --context cluster-a -n traefik get svc traefik
 kubectl --context cluster-b -n traefik get svc traefik
 kubectl --context cluster-b -n artifact-registry get pods,pvc,ingress
+kubectl --context cluster-b -n container-registry get pods,pvc,ingress
 kubectl --context cluster-a -n linkerd-multicluster get svc linkerd-gateway
 kubectl --context cluster-b -n linkerd-multicluster get svc linkerd-gateway
 curl -I http://argocd.a.lab.home
 curl -I http://maven.b.lab.home
+curl -I http://registry.b.lab.home/v2/
 curl -I http://grafana.b.lab.home
 ```
 
@@ -509,6 +553,7 @@ Expected:
 - cluster A Traefik has `EXTERNAL-IP` `192.168.50.240`
 - cluster B Traefik has `EXTERNAL-IP` `192.168.50.245`
 - Reposilite is reachable at `http://maven.b.lab.home`
+- the OCI registry is reachable at `http://registry.b.lab.home/v2/`
 - cluster A Linkerd gateway has `EXTERNAL-IP` `192.168.50.241`
 - cluster B Linkerd gateway has `EXTERNAL-IP` `192.168.50.246`
 - `http://argocd.a.lab.home` returns `HTTP/1.1 200 OK`

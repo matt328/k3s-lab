@@ -107,8 +107,10 @@ client -> order-service -> payment-service
 Work items:
 
 - create app namespaces and Argo CD Applications for cluster A
-- deploy a lab-local OCI image registry
+- deploy a lab-local OCI image registry in cluster B at `registry.b.lab.home`
+- configure k3s nodes to pull from the HTTP lab registry
 - publish container images for both services to the lab-local registry
+- document the image publish command used by local builds and CI
 - create per-service values files in this repo
 - expose Order service through Traefik using HTTPRoute or Ingress
 - keep Payment service cluster-internal initially
