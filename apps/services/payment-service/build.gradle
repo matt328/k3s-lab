@@ -8,10 +8,9 @@ plugins {
 
 group = 'dev.teeter.demos'
 version = providers.gradleProperty('version').get()
-description = 'Order service'
+description = 'Payment service'
 
 def javaVersion = providers.gradleProperty('javaVersion').get()
-def orderApiVersion = providers.gradleProperty('orderApiVersion').get()
 def paymentApiVersion = providers.gradleProperty('paymentApiVersion').get()
 def mavenRepositoryUrl = providers.gradleProperty('mavenRepositoryUrl')
   .orElse(providers.environmentVariable('MAVEN_REPOSITORY_URL'))
@@ -19,7 +18,7 @@ def mavenRepositoryUrl = providers.gradleProperty('mavenRepositoryUrl')
   .get()
 def imageRepository = providers.gradleProperty('imageRepository')
   .orElse(providers.environmentVariable('IMAGE_REPOSITORY'))
-  .orElse('registry.b.lab.home/k3s-lab/order-service')
+  .orElse('registry.b.lab.home/k3s-lab/payment-service')
   .get()
 def imageTag = providers.gradleProperty('imageTag')
   .orElse(providers.environmentVariable('IMAGE_TAG'))
@@ -52,7 +51,6 @@ dependencyManagement {
 }
 
 configurations {
-  openapiSpec
   paymentApiSpec
 }
 
@@ -72,7 +70,6 @@ dependencies {
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-  openapiSpec "dev.teeter.demos.apis:order-api-spec:${orderApiVersion}@yaml"
   paymentApiSpec "dev.teeter.demos.apis:payment-api-spec:${paymentApiVersion}@yaml"
 }
 
@@ -83,9 +80,8 @@ tasks.named('test') {
 springBoot {
   buildInfo {
     properties {
-      name = 'order-service'
+      name = 'payment-service'
       additional = [
-        'orderApiVersion'  : orderApiVersion,
         'paymentApiVersion': paymentApiVersion,
         'imageRepository'  : imageRepository,
         'imageTag'         : imageTag,
@@ -152,11 +148,10 @@ jib {
       '-Djava.security.egd=file:/dev/urandom',
     ]
     labels = [
-      'org.opencontainers.image.title'      : 'order-service',
-      'org.opencontainers.image.description': 'Order service',
-      'org.opencontainers.image.version'    : project.version.toString(),
-      'k3s-lab.dev/order-api-version'       : orderApiVersion,
-      'k3s-lab.dev/payment-api-version'     : paymentApiVersion,
+      'org.opencontainers.image.title'        : 'payment-service',
+      'org.opencontainers.image.description'  : 'Payment service',
+      'org.opencontainers.image.version'      : project.version.toString(),
+      'k3s-lab.dev/payment-api-version'       : paymentApiVersion,
     ]
   }
   outputPaths {
@@ -166,14 +161,14 @@ jib {
   }
 }
 
-tasks.register('openApiGenerateOrdersServer', org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+tasks.register('openApiGeneratePaymentsServer', org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
   group = 'openapi tools'
   generatorName = 'spring'
-  inputSpec = configurations.openapiSpec.singleFile.absolutePath
+  inputSpec = configurations.paymentApiSpec.singleFile.absolutePath
   outputDir = "${buildDir}/generated"
-  invokerPackage = 'dev.teeter.demos.orders'
-  apiPackage = 'dev.teeter.demos.orders.api'
-  modelPackage = 'dev.teeter.demos.orders.model'
+  invokerPackage = 'dev.teeter.demos.payments'
+  apiPackage = 'dev.teeter.demos.payments.api'
+  modelPackage = 'dev.teeter.demos.payments.model'
 
   globalProperties.set([
     models         : '',
@@ -189,39 +184,12 @@ tasks.register('openApiGenerateOrdersServer', org.openapitools.generator.gradle.
     useJakartaEe      : 'true',
     useSpringBoot3    : 'true',
     useResponseEntity : 'false',
-    configPackage     : 'dev.teeter.demos.orders.configuration'
-  ])
-}
-
-tasks.register('openApiGeneratePaymentsClient', org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
-  group = 'openapi tools'
-  generatorName = 'spring'
-  inputSpec = configurations.paymentApiSpec.singleFile.absolutePath
-  outputDir = "${buildDir}/generated-payment-client"
-
-  globalProperties.set([
-    apis           : '',
-    models         : '',
-    supportingFiles: '',
-  ])
-
-  configOptions.set([
-    useFeignClientUrl    : 'true',
-    library              : 'spring-cloud',
-    configPackage        : 'dev.teeter.demos.payments.config',
-    apiPackage           : 'dev.teeter.demos.payments.api',
-    modelPackage         : 'dev.teeter.demos.payments.model',
-    skipDefaultInterface : 'true',
-    useOptional          : 'true',
-    useResponseEntity    : 'false',
-    useJakartaEe         : 'true',
+    configPackage     : 'dev.teeter.demos.payments.configuration'
   ])
 }
 
 sourceSets['main'].java.srcDir("${buildDir}/generated/src/main/java")
-sourceSets['main'].java.srcDir("${buildDir}/generated-payment-client/src/main/java")
 
 tasks.named('compileJava') {
-  dependsOn(tasks.named('openApiGenerateOrdersServer'))
-  dependsOn(tasks.named('openApiGeneratePaymentsClient'))
+  dependsOn(tasks.named('openApiGeneratePaymentsServer'))
 }

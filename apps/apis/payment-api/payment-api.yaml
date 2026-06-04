@@ -1,0 +1,103 @@
+---
+openapi: 3.0.3
+info:
+  title: Payment API
+  version: 0.0.0
+  description: API for processing payments for orders.
+
+paths:
+  /payments:
+    post:
+      summary: Create a new payment for an order
+      description: Processes a payment for the specified order ID.
+      operationId: createPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentRequest"
+      responses:
+        "201":
+          description: Payment successfully processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "400":
+          description: Invalid request
+        "402":
+          description: Payment failed
+        "500":
+          description: Internal server error
+
+  /payments/{id}:
+    get:
+      summary: Get payment status
+      description: Retrieve information about a specific payment.
+      operationId: getPayment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payment details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Payment"
+        "404":
+          description: Payment not found
+
+components:
+  schemas:
+    PaymentRequest:
+      type: object
+      required:
+        - orderId
+        - amount
+        - method
+      properties:
+        orderId:
+          type: string
+          description: ID of the order being paid for
+        amount:
+          type: number
+          format: float
+          description: Amount to charge
+        method:
+          type: string
+          enum: [CREDIT_CARD, DEBIT_CARD, PAYPAL]
+          description: Payment method to use
+
+    Payment:
+      type: object
+      required:
+        - id
+        - orderId
+        - amount
+        - status
+      properties:
+        id:
+          type: string
+          description: Unique identifier for this payment
+        orderId:
+          type: string
+          description: Associated order ID
+        amount:
+          type: number
+          format: float
+          description: Amount charged
+        status:
+          type: string
+          enum: [PENDING, SUCCESS, FAILED]
+          description: Current payment status
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
