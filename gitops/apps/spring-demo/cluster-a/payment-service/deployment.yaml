@@ -31,6 +31,10 @@ spec:
         app.kubernetes.io/part-of: spring-demo
         app.kubernetes.io/version: 0.1.0-cloud-native.6cfb39d
     spec:
+      hostAliases:
+        - ip: 192.168.50.245
+          hostnames:
+            - tempo.b.lab.home
       terminationGracePeriodSeconds: 45
       containers:
         - name: payment-service
