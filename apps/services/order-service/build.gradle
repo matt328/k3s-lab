@@ -56,10 +56,16 @@ configurations {
 
 dependencies {
   implementation 'org.springframework.boot:spring-boot-starter-web'
+  implementation 'org.springframework.boot:spring-boot-starter-actuator'
   implementation 'org.springframework.boot:spring-boot-starter-validation'
   implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
   implementation 'org.openapitools:jackson-databind-nullable:0.2.5'
   implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+  implementation 'io.github.openfeign:feign-micrometer'
+  implementation 'io.micrometer:micrometer-registry-prometheus'
+  implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+  implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
+  implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
 
   testImplementation 'org.springframework.boot:spring-boot-starter-test'
   testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -69,6 +75,59 @@ dependencies {
 
 tasks.named('test') {
   useJUnitPlatform()
+}
+
+springBoot {
+  buildInfo {
+    properties {
+      name = 'order-service'
+      additional = [
+        'orderApiVersion': orderApiVersion,
+        'imageRepository': imageRepository,
+        'imageTag'       : imageTag,
+        'javaVersion'    : javaVersion,
+      ]
+    }
+  }
+}
+
+def generatedResourcesDir = layout.buildDirectory.dir('generated-resources/git')
+
+tasks.register('generateGitProperties') {
+  def outputFile = generatedResourcesDir.map { it.file('git.properties') }
+  outputs.file(outputFile)
+
+  doLast {
+    def runGit = { List<String> args ->
+      def process = new ProcessBuilder(['git'] + args)
+        .directory(projectDir)
+        .redirectErrorStream(true)
+        .start()
+      def stdout = process.inputStream.getText('UTF-8').trim()
+      def exitCode = process.waitFor()
+      if (exitCode != 0) {
+        throw new GradleException("git ${args.join(' ')} failed: ${stdout}")
+      }
+      stdout
+    }
+
+    def gitProperties = outputFile.get().asFile
+    gitProperties.parentFile.mkdirs()
+    gitProperties.text = [
+      "git.branch=${runGit(['rev-parse', '--abbrev-ref', 'HEAD'])}",
+      "git.commit.id=${runGit(['rev-parse', 'HEAD'])}",
+      "git.commit.id.abbrev=${runGit(['rev-parse', '--short', 'HEAD'])}",
+      "git.commit.time=${runGit(['show', '-s', '--format=%cI', 'HEAD'])}",
+      "git.dirty=${runGit(['status', '--porcelain']).isEmpty() ? 'false' : 'true'}",
+      ''
+    ].join('\n')
+  }
+}
+
+sourceSets['main'].resources.srcDir(generatedResourcesDir)
+
+tasks.named('processResources') {
+  dependsOn(tasks.named('generateGitProperties'))
 }
 
 jib {
@@ -84,6 +143,10 @@ jib {
   allowInsecureRegistries = true
   container {
     ports = ['8080']
+    jvmFlags = [
+      '-XX:MaxRAMPercentage=75.0',
+      '-Djava.security.egd=file:/dev/urandom',
+    ]
     labels = [
       'org.opencontainers.image.title'      : 'order-service',
       'org.opencontainers.image.description': 'Order service',

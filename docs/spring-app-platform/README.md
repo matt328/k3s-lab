@@ -30,9 +30,11 @@ scripts can simulate the CI publish flow against `maven.b.lab.home`.
 
 The Order service has been vendored into this lab at
 `apps/services/order-service` so local scripts can simulate image publishing to
-`registry.b.lab.home` before runtime cloud-native changes are made. The image
-publish simulation uses Jib through the Gradle wrapper, so it does not require a
-local Docker daemon.
+`registry.b.lab.home`. It now includes the first cloud-native Spring baseline:
+Actuator probes, Prometheus metrics, Micrometer/OpenTelemetry tracing, JSON
+logs, graceful shutdown, bounded Feign timeouts, and Actuator build/Git/contract
+metadata. The image publish simulation uses Jib through the Gradle wrapper, so
+it does not require a local Docker daemon.
 
 ## Current-state snapshot
 
@@ -46,9 +48,9 @@ The current projects already demonstrate the beginning of the desired pattern:
 
 Important gaps to close before treating these as reference implementations:
 
-- the Order service does not yet include Spring Boot Actuator
-- neither service exposes Prometheus metrics
-- neither service emits application traces to Tempo
+- Payment does not yet include the full cloud-native baseline
+- Payment does not yet expose Prometheus metrics
+- Payment does not yet emit application traces to Tempo
 - Payment exposes only the health actuator endpoint
 - the chart's default probes are not rendered because the template checks
   `.Values.*Probe.enabled`, but the values file does not define `enabled`
@@ -56,7 +58,8 @@ Important gaps to close before treating these as reference implementations:
   Order deployment fail readiness/liveness checks
 - the OpenAPI artifact currently resolves from AWS CodeArtifact, so the lab
   needs a reproducible artifact access strategy
-- image build and publish flow is not yet wired into the k3s-lab GitOps flow
+- the first Order deployment uses raw Kustomize until the reusable Spring Boot
+  Helm chart is modernized
 
 ## Planning documents
 

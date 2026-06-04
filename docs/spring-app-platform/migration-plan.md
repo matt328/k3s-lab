@@ -47,6 +47,8 @@ Acceptance criteria:
 
 ## Phase 5.2: application cloud-native baseline
 
+Status: in progress; complete for Order service, pending for Payment service.
+
 Purpose: make the Spring services deployable and observable before tuning the
 platform around them.
 
@@ -71,6 +73,10 @@ Acceptance criteria:
 - app logs in Loki can be filtered by service and trace ID
 
 ## Phase 5.3: Helm chart modernization
+
+Status: pending. The first Order service deployment uses raw Kustomize as an
+interim manifest so the app baseline can be exercised before the chart is
+modernized.
 
 Purpose: turn the existing generic Spring Boot chart into a safe app-platform
 default for these services.
@@ -98,6 +104,9 @@ Acceptance criteria:
 - services can be deployed without editing chart templates per app
 
 ## Phase 5.4: cluster A deployment through GitOps
+
+Status: in progress; Order service is wired as the first GitOps-managed Spring
+workload in cluster A, with Payment still pending.
 
 Purpose: deploy the first real Spring topology into the existing lab.
 

@@ -545,7 +545,7 @@ Simulate a main-branch release:
 ./scripts/ci-order-api.sh main
 ```
 
-## Phase 5.4: Order service image CI simulation
+## Phase 5.4: Order service cloud-native baseline and deployment
 
 The Order service is vendored under:
 
@@ -553,8 +553,14 @@ The Order service is vendored under:
 apps/services/order-service
 ```
 
-This step only wires build and image publishing. Runtime cloud-native changes
-such as Actuator, metrics, tracing, and structured logging are handled later.
+The service includes the first Spring cloud-native baseline:
+
+- Actuator health groups for Kubernetes startup, readiness, and liveness probes
+- Prometheus metrics at `/actuator/prometheus`
+- Micrometer Tracing with OpenTelemetry OTLP export to Tempo
+- structured JSON stdout logs with Micrometer trace/span MDC fields for Loki
+- graceful shutdown and bounded Feign client timeout defaults
+- Actuator build, Git, image, and Order API contract metadata
 
 The local CI simulation resolves the Order API artifact from Reposilite, builds
 with the service's Gradle wrapper, and publishes with Jib to:
@@ -576,6 +582,23 @@ Simulate a main-branch image release:
 
 ```bash
 ./scripts/ci-order-service.sh main
+```
+
+The first cluster A deployment is checked in under:
+
+```text
+gitops/apps/spring-demo/cluster-a/order-service
+```
+
+It is intentionally a small raw Kustomize workload until the reusable Spring
+Boot Helm chart is modernized. The Deployment pins the image by digest, enables
+Linkerd injection on the pod template, adds Alloy-compatible Prometheus scrape
+annotations, and exposes Order through Traefik at `http://order.a.lab.home`.
+
+The currently pinned image is:
+
+```text
+registry.b.lab.home/k3s-lab/order-service:0.1.0-cloud-native.20260604182139@sha256:3d1442f9343f7c8a97d15a7d9b6ba9bf092451306cb72a7d38eae4b6f5bd172b
 ```
 
 ## Clean rebuild smoke test

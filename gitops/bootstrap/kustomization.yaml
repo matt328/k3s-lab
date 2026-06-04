@@ -19,3 +19,4 @@ resources:
   - applications/observability-ingress-cluster-b.yaml
   - applications/alloy-cluster-a.yaml
   - applications/alloy-cluster-b.yaml
+  - applications/order-service-cluster-a.yaml
