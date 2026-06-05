@@ -6,6 +6,9 @@ persistence:
   storageClassName: local-path
   size: 5Gi
 
+initChownData:
+  enabled: false
+
 testFramework:
   enabled: false
 
