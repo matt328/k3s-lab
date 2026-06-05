@@ -3,7 +3,7 @@
 #
 # Required env: K3S_TOKEN, MASTER_IP, NODE_IP
 # Optional env: NODE_LABELS (comma-separated k3s node labels), FLANNEL_IFACE
-# (default: eth1), LAB_OCI_REGISTRY_HOST
+# (default: eth1), LAB_OCI_REGISTRY_HOST, LAB_OCI_REGISTRY_IP
 set -euo pipefail
 
 : "${K3S_TOKEN:?}"
@@ -38,6 +38,24 @@ rm -f "${desired_config}"
 
 registries_changed=false
 if [ -n "${LAB_OCI_REGISTRY_HOST:-}" ]; then
+  if [ -n "${LAB_OCI_REGISTRY_IP:-}" ]; then
+    hosts_tmp="$(mktemp)"
+    awk -v host="${LAB_OCI_REGISTRY_HOST}" '
+      $0 ~ "^[[:space:]]*#" { print; next }
+      {
+        for (i = 2; i <= NF; i++) {
+          if ($i == host) {
+            next
+          }
+        }
+        print
+      }
+    ' /etc/hosts >"${hosts_tmp}"
+    printf '%s %s\n' "${LAB_OCI_REGISTRY_IP}" "${LAB_OCI_REGISTRY_HOST}" >>"${hosts_tmp}"
+    install -m 0644 "${hosts_tmp}" /etc/hosts
+    rm -f "${hosts_tmp}"
+  fi
+
   desired_registries="$(mktemp)"
   cat >"${desired_registries}" <<EOF
 # Managed by scripts/install-k3s-agent.sh. Edit and re-install to change.

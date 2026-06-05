@@ -50,3 +50,13 @@ datasources:
             datasourceUid: loki
           tracesToMetrics:
             datasourceUid: prometheus
+
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    searchNamespace: observability
+    provider:
+      allowUiUpdates: false
+      foldersFromFilesStructure: false

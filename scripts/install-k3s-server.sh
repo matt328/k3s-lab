@@ -3,7 +3,8 @@
 # (both are GitOps-managed) and install the Gateway API standard CRDs.
 #
 # Required env: K3S_TOKEN, NODE_IP, GATEWAY_API_VERSION
-# Optional env: FLANNEL_IFACE (default: eth1), LAB_OCI_REGISTRY_HOST
+# Optional env: FLANNEL_IFACE (default: eth1), LAB_OCI_REGISTRY_HOST,
+# LAB_OCI_REGISTRY_IP
 #
 # Server config is reconciled on every provision run. If it changes after k3s is
 # already installed, the service is restarted so the new config is applied.
@@ -36,6 +37,24 @@ rm -f "${desired_config}"
 
 registries_changed=false
 if [ -n "${LAB_OCI_REGISTRY_HOST:-}" ]; then
+  if [ -n "${LAB_OCI_REGISTRY_IP:-}" ]; then
+    hosts_tmp="$(mktemp)"
+    awk -v host="${LAB_OCI_REGISTRY_HOST}" '
+      $0 ~ "^[[:space:]]*#" { print; next }
+      {
+        for (i = 2; i <= NF; i++) {
+          if ($i == host) {
+            next
+          }
+        }
+        print
+      }
+    ' /etc/hosts >"${hosts_tmp}"
+    printf '%s %s\n' "${LAB_OCI_REGISTRY_IP}" "${LAB_OCI_REGISTRY_HOST}" >>"${hosts_tmp}"
+    install -m 0644 "${hosts_tmp}" /etc/hosts
+    rm -f "${hosts_tmp}"
+  fi
+
   desired_registries="$(mktemp)"
   cat >"${desired_registries}" <<EOF
 # Managed by scripts/install-k3s-server.sh. Edit and re-install to change.

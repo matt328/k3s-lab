@@ -216,6 +216,11 @@ The existing k3s-lab observability platform provides:
 
 The Spring reference apps should make those backends useful.
 
+The generic app observability baseline is documented in
+[observability.md](observability.md). It defines the dashboard label contract,
+dashboard catalog, traffic generator workflow, and requirements for onboarding
+future applications.
+
 ### Logs
 
 Target:
@@ -230,6 +235,10 @@ Target:
 Alloy already collects pod logs, so app changes should focus on log shape and
 correlation fields.
 
+Alloy enriches app logs with stable platform labels: `cluster`, `namespace`,
+`workload`, `component`, `part_of`, `pod`, and `container`. The `version` label
+is intentionally kept off Loki streams to avoid index churn on each rollout.
+
 ### Metrics
 
 Target:
@@ -242,6 +251,8 @@ Target:
 - include JVM, HTTP server, HTTP client, process, and custom business metrics
 - allow Prometheus scraping through pod annotations or ServiceMonitor-like
   metadata supported by the lab stack
+- publish HTTP histogram buckets for server and client requests so Grafana can
+  calculate p50, p95, and p99 latency
 
 The chart should make scrape configuration opt-in per workload, with good
 defaults for Spring Boot.
@@ -273,15 +284,14 @@ but application traces still require Spring/OpenTelemetry instrumentation.
 
 ### Dashboards
 
-Grafana should eventually include dashboards for:
+Grafana includes provisioned dashboards for:
 
-- service health and availability
-- request rate, error rate, and duration by service and endpoint
-- JVM memory, GC, threads, and CPU
-- outbound dependency latency and errors
-- Linkerd service-to-service traffic
-- log volume and error logs by service
-- trace exemplars for slow or failing requests
+- application fleet health and golden signals
+- per-service request rate, error rate, and latency
+- JVM memory and CPU drilldown
+- Kubernetes pod restarts and readiness signals
+- logs filtered by cluster, namespace, and workload
+- migration monitoring with the same generic workload labels
 
 ## Configuration model
 

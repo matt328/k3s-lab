@@ -29,6 +29,24 @@ alloy:
         }
 
         rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          regex         = "(.+)"
+          target_label  = "workload"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_component"]
+          regex         = "(.+)"
+          target_label  = "component"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_part_of"]
+          regex         = "(.+)"
+          target_label  = "part_of"
+        }
+
+        rule {
           target_label = "cluster"
           replacement  = "cluster-a"
         }
@@ -88,6 +106,30 @@ alloy:
         rule {
           source_labels = ["__meta_kubernetes_pod_name"]
           target_label  = "pod"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          regex         = "(.+)"
+          target_label  = "workload"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_component"]
+          regex         = "(.+)"
+          target_label  = "component"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_part_of"]
+          regex         = "(.+)"
+          target_label  = "part_of"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_version"]
+          regex         = "(.+)"
+          target_label  = "version"
         }
 
         rule {

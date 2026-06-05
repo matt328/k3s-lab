@@ -150,24 +150,33 @@ Acceptance criteria:
 
 ## Phase 5.5: observability tuning
 
+Status: in progress. The lab now has a generic app observability baseline:
+Alloy enriches app labels, Spring services publish HTTP histogram metrics,
+Grafana dashboards are provisioned through GitOps, and a local HTTP traffic
+generator drives repeatable request load.
+
 Purpose: make the lab excellent for diagnosing service behavior.
 
 Work items:
 
-- add Grafana dashboards for Spring service health and latency
+- add Grafana dashboards for fleet, service drilldown, and migration monitoring
 - add dashboards or panels for JVM metrics
 - add LogQL examples for service errors and trace correlation
 - add Tempo queries for slow traces and failed traces
 - add Prometheus recording rules or saved queries if useful
 - tune Alloy scrape/log pipelines for application labels
 - document a request-debugging workflow from ingress to service dependency
+- document the generic onboarding contract for future applications
 
 Acceptance criteria:
 
 - a single request can be followed from ingress to logs to trace to service
   metrics
 - failed requests are visible in logs, traces, and metrics
-- dashboards distinguish Order from Payment and cluster A from cluster B
+- dashboards distinguish workloads by cluster, namespace, workload, component,
+  and application family
+- the same dashboards work for future apps that follow the label and metrics
+  contract
 
 ## Deferred: dynamic configuration prototype
 

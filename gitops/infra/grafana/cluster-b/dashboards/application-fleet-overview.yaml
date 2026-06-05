@@ -1,0 +1,180 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-application-fleet-overview
+  labels:
+    grafana_dashboard: "1"
+data:
+  application-fleet-overview.json: |
+    {
+      "uid": "app-fleet-overview",
+      "title": "Application Fleet Overview",
+      "tags": ["applications", "fleet", "golden-signals"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "30s",
+      "time": { "from": "now-1h", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "cluster",
+            "label": "Cluster",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": { "query": "label_values(http_server_requests_seconds_count, cluster)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+            "refresh": 1,
+            "includeAll": true,
+            "allValue": ".*",
+            "multi": true
+          },
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": { "query": "label_values(http_server_requests_seconds_count{cluster=~\"$cluster\"}, namespace)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+            "refresh": 1,
+            "includeAll": true,
+            "allValue": ".*",
+            "multi": true
+          },
+          {
+            "name": "workload",
+            "label": "Workload",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": { "query": "label_values(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\"}, workload)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+            "refresh": 1,
+            "includeAll": true,
+            "allValue": ".*",
+            "multi": true
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "stat",
+          "title": "Request rate",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$workload\",uri!~\"/actuator/.*\"}[$__rate_interval]))"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" }
+        },
+        {
+          "id": 2,
+          "type": "stat",
+          "title": "5xx error rate",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(sum(rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$workload\",status=~\"5..\",uri!~\"/actuator/.*\"}[$__rate_interval])) / sum(rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$workload\",uri!~\"/actuator/.*\"}[$__rate_interval]))) * 100"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "percent", "decimals": 2, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" }
+        },
+        {
+          "id": 3,
+          "type": "stat",
+          "title": "p95 latency",
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$workload\",uri!~\"/actuator/.*\"}[$__rate_interval])))"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s", "decimals": 3, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 1 }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" }
+        },
+        {
+          "id": 4,
+          "type": "stat",
+          "title": "Pod restarts",
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(increase(kube_pod_container_status_restarts_total{namespace=~\"$namespace\",pod=~\"$workload-[a-z0-9]+-[a-z0-9]+\"}[$__range]))"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "short", "decimals": 0, "thresholds": { "mode": "absolute", "steps": [{ "color": "green" }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 3 }] } }, "overrides": [] },
+          "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "orientation": "auto", "textMode": "auto" }
+        },
+        {
+          "id": 5,
+          "type": "timeseries",
+          "title": "Request rate by workload",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (workload) (rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$workload\",uri!~\"/actuator/.*\"}[$__rate_interval]))",
+              "legendFormat": "{{workload}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        },
+        {
+          "id": 6,
+          "type": "timeseries",
+          "title": "p95 latency by workload",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le, workload) (rate(http_server_requests_seconds_bucket{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$workload\",uri!~\"/actuator/.*\"}[$__rate_interval])))",
+              "legendFormat": "{{workload}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        },
+        {
+          "id": 7,
+          "type": "timeseries",
+          "title": "5xx errors by workload",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (workload, status) (rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$workload\",status=~\"5..\",uri!~\"/actuator/.*\"}[$__rate_interval]))",
+              "legendFormat": "{{workload}} {{status}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        },
+        {
+          "id": 8,
+          "type": "table",
+          "title": "Slowest workloads",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "topk(10, histogram_quantile(0.95, sum by (le, namespace, workload) (rate(http_server_requests_seconds_bucket{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$workload\",uri!~\"/actuator/.*\"}[$__rate_interval]))))",
+              "format": "table",
+              "instant": true
+            }
+          ]
+        }
+      ]
+    }

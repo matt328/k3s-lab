@@ -114,6 +114,8 @@ vagrant reload --provision              # reboot + re-provision
 vagrant destroy -f                      # tear everything down
 ```
 
+Cross-cutting follow-up work is tracked in [`docs/todo.md`](docs/todo.md).
+
 Use `./scripts/up.sh` instead of plain `vagrant up`. Vagrant may provision
 machines in parallel, which can race an agent ahead of its master. The wrapper
 uses `vagrant up --no-parallel` so each master installs k3s before its agent
@@ -494,7 +496,9 @@ repushed after `vagrant destroy`.
 
 k3s containerd must be configured to pull from this HTTP registry. New or
 reprovisioned nodes get `/etc/rancher/k3s/registries.yaml` from the k3s install
-provisioners. For already-running nodes, run:
+provisioners. For already-running nodes, run this to configure the containerd
+mirror and an `/etc/hosts` mapping from `registry.b.lab.home` to the cluster B
+ingress IP:
 
 ```bash
 ./scripts/configure-oci-registry-nodes.sh
@@ -606,9 +610,39 @@ and add Alloy-compatible Prometheus scrape annotations. Order is exposed through
 The currently pinned images are:
 
 ```text
-registry.b.lab.home/k3s-lab/order-service:0.1.0@sha256:816d52b740cc89efdc19005df067cbaf9568219d1ffde5713790de13c9347677
-registry.b.lab.home/k3s-lab/payment-service:0.1.0@sha256:65b3023ac9168530d33d80397e50de623fdba9957ea6ec7654e298720cf0df04
+registry.b.lab.home/k3s-lab/order-service:0.1.0-observability.f48acf0@sha256:fad6e90186f1573ca2599f0635eecbbc877f1a7489bc09e784fb318f690cc7be
+registry.b.lab.home/k3s-lab/payment-service:0.1.0-observability.f48acf0@sha256:0af9fcc589795d40f62a9470ce0107f32e03d954dc4441a25538f295dcd1e983
 ```
+
+## Application observability baseline
+
+The lab provisions generic application observability dashboards in Grafana, not
+only migration-specific views. The baseline uses common labels from Kubernetes
+app metadata so the same dashboards can monitor many services:
+
+```text
+cluster, namespace, workload, component, part_of, version, pod, container
+```
+
+Grafana dashboards are provisioned from
+`gitops/infra/grafana/cluster-b/dashboards`:
+
+- Application Fleet Overview
+- Service Drilldown
+- Migration Watch
+
+Alloy enriches Prometheus metrics and Loki logs with the app labels, Spring apps
+publish HTTP histogram buckets for p50/p95/p99 latency, and the local traffic
+generator can create steady request load:
+
+```bash
+scripts/generate-http-traffic.sh --duration 600 --rate 5
+```
+
+The default target is `http://order.a.lab.home/orders/{id}`, which exercises the
+current `client -> order-service -> payment-service` path. See
+`docs/spring-app-platform/observability.md` for the full label contract,
+dashboard catalog, onboarding checklist, and migration monitoring workflow.
 
 ## Clean rebuild smoke test
 

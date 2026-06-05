@@ -6,6 +6,7 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${repo_root}/scripts/lib/env.sh"
 
 registry_host="${LAB_OCI_REGISTRY_HOST:-registry.b.lab.home}"
+registry_ip="${LAB_OCI_REGISTRY_IP:-${CLUSTER_B_INGRESS_IP:-192.168.50.245}}"
 
 running_nodes="$(vagrant status --machine-readable | awk -F, '$3 == "state" && $4 == "running" { print $2 }')"
 
@@ -17,10 +18,28 @@ fi
 failed_nodes=()
 for node in ${running_nodes}; do
   echo "configuring ${node} for ${registry_host}"
-  if ! vagrant ssh "${node}" -c "sudo LAB_OCI_REGISTRY_HOST='${registry_host}' bash -s" <<'REMOTE'
+  if ! vagrant ssh "${node}" -c "sudo LAB_OCI_REGISTRY_HOST='${registry_host}' LAB_OCI_REGISTRY_IP='${registry_ip}' bash -s" <<'REMOTE'
 set -euo pipefail
 
 : "${LAB_OCI_REGISTRY_HOST:?}"
+: "${LAB_OCI_REGISTRY_IP:?}"
+
+hosts_line="${LAB_OCI_REGISTRY_IP} ${LAB_OCI_REGISTRY_HOST}"
+hosts_tmp="$(mktemp)"
+awk -v host="${LAB_OCI_REGISTRY_HOST}" '
+  $0 ~ "^[[:space:]]*#" { print; next }
+  {
+    for (i = 2; i <= NF; i++) {
+      if ($i == host) {
+        next
+      }
+    }
+    print
+  }
+' /etc/hosts >"${hosts_tmp}"
+printf '%s\n' "${hosts_line}" >>"${hosts_tmp}"
+install -m 0644 "${hosts_tmp}" /etc/hosts
+rm -f "${hosts_tmp}"
 
 install -d -m 0755 /etc/rancher/k3s
 desired_registries="$(mktemp)"

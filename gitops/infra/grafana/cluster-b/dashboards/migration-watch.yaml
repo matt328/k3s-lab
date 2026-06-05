@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-migration-watch
+  labels:
+    grafana_dashboard: "1"
+data:
+  migration-watch.json: |
+    {
+      "uid": "migration-watch",
+      "title": "Migration Watch",
+      "tags": ["applications", "migration", "golden-signals"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "15s",
+      "time": { "from": "now-30m", "to": "now" },
+      "templating": {
+        "list": [
+          {
+            "name": "cluster",
+            "label": "Cluster",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": { "query": "label_values(http_server_requests_seconds_count, cluster)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+            "refresh": 1,
+            "includeAll": true,
+            "allValue": ".*",
+            "multi": true
+          },
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "query": { "query": "label_values(http_server_requests_seconds_count{cluster=~\"$cluster\"}, namespace)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+            "refresh": 1,
+            "current": { "text": "spring-demo", "value": "spring-demo" }
+          },
+          {
+            "name": "edge",
+            "label": "Workload pair",
+            "type": "custom",
+            "query": "order-service|payment-service",
+            "current": { "text": "order-service|payment-service", "value": "order-service|payment-service" }
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Request rate by workload and cluster",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (cluster, workload) (rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$edge\",uri!~\"/actuator/.*\"}[$__rate_interval]))",
+              "legendFormat": "{{cluster}} {{workload}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        },
+        {
+          "id": 2,
+          "type": "timeseries",
+          "title": "p95 latency by workload and cluster",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le, cluster, workload) (rate(http_server_requests_seconds_bucket{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$edge\",uri!~\"/actuator/.*\"}[$__rate_interval])))",
+              "legendFormat": "{{cluster}} {{workload}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+          "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } }
+        },
+        {
+          "id": 3,
+          "type": "timeseries",
+          "title": "5xx errors by workload",
+          "gridPos": { "h": 7, "w": 12, "x": 0, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (cluster, workload, status) (rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$edge\",status=~\"5..\",uri!~\"/actuator/.*\"}[$__rate_interval]))",
+              "legendFormat": "{{cluster}} {{workload}} {{status}}"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+        },
+        {
+          "id": 4,
+          "type": "timeseries",
+          "title": "Order requests vs Payment requests",
+          "gridPos": { "h": 7, "w": 12, "x": 12, "y": 8 },
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "targets": [
+            {
+              "refId": "orders",
+              "expr": "sum(rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=\"order-service\",uri=\"/orders/{id}\"}[$__rate_interval]))",
+              "legendFormat": "orders"
+            },
+            {
+              "refId": "payments",
+              "expr": "sum(rate(http_server_requests_seconds_count{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=\"payment-service\",uri=\"/payments\"}[$__rate_interval]))",
+              "legendFormat": "payments"
+            }
+          ],
+          "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] }
+        },
+        {
+          "id": 5,
+          "type": "logs",
+          "title": "Migration logs",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 15 },
+          "datasource": { "type": "loki", "uid": "loki" },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{cluster=~\"$cluster\",namespace=~\"$namespace\",workload=~\"$edge\"} | json",
+              "queryType": "range"
+            }
+          ],
+          "options": { "dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showCommonLabels": false, "showLabels": false, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true }
+        }
+      ]
+    }

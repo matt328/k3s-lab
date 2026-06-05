@@ -60,6 +60,8 @@ Important gaps to close before treating these as reference implementations:
   service, deployment, observability, configuration, and migration model.
 - [Migration plan](migration-plan.md) breaks the path from today's projects to
   the reference architecture into executable phases.
+- [Observability baseline](observability.md) documents the generic labels,
+  dashboards, traffic generator, and migration monitoring workflow.
 - [Open questions](open-questions.md) tracks the remaining unresolved decisions.
 
 ## Working assumptions
