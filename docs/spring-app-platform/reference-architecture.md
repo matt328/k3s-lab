@@ -183,21 +183,22 @@ gitops/apps/spring-demo/
     order-service/ or payment-service/
 ```
 
-The app manifests should consume the reusable Spring Boot chart, with per-app
-values checked into Git and environment-specific runtime config separated from
-the chart itself.
+The cluster A app manifests consume the vendored reusable Spring Boot chart,
+with per-app values checked into Git and environment-specific runtime config
+separated from the chart itself.
 
-The Helm chart should support:
+The Helm chart supports:
 
 - Linkerd injection annotations
 - standard app, version, and component labels
 - configurable env vars and envFrom sources
 - ConfigMap and Secret references
 - startup, readiness, and liveness probes
-- service ports and optional management port
-- Prometheus scrape annotations or ServiceMonitor-compatible labels
+- service ports
+- Prometheus scrape annotations
 - HTTPRoute and Ingress options
 - PodDisruptionBudget
+- HorizontalPodAutoscaler hooks for later phases
 - topology spread constraints and affinity
 - resource requests and limits
 - security context defaults for non-root containers

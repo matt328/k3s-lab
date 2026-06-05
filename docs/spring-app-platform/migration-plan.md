@@ -74,9 +74,9 @@ Acceptance criteria:
 
 ## Phase 5.3: Helm chart modernization
 
-Status: pending. The first Order and Payment deployments use raw Kustomize as
-interim manifests so the app baseline can be exercised before the chart is
-modernized.
+Status: complete for the cluster A Order and Payment baseline. The first raw
+Kustomize workloads have been replaced with per-service values files that render
+the vendored `charts/spring-boot` chart.
 
 Purpose: turn the existing generic Spring Boot chart into a safe app-platform
 default for these services.
@@ -106,7 +106,7 @@ Acceptance criteria:
 ## Phase 5.4: cluster A deployment through GitOps
 
 Status: in progress; Order and Payment are wired as GitOps-managed Spring
-workloads in cluster A.
+workloads in cluster A through the reusable Spring Boot Helm chart.
 
 Purpose: deploy the first real Spring topology into the existing lab.
 

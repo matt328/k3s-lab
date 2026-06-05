@@ -595,18 +595,19 @@ gitops/apps/spring-demo/cluster-a/order-service
 gitops/apps/spring-demo/cluster-a/payment-service
 ```
 
-They are intentionally small raw Kustomize workloads until the reusable Spring
-Boot Helm chart is modernized. The Deployments pin images by digest, enable
-Linkerd injection on the pod template, and add Alloy-compatible Prometheus
-scrape annotations. Order is exposed through Traefik at
+They render the vendored reusable Spring Boot Helm chart at
+`charts/spring-boot` through Kustomize. Per-service image, env, probe, ingress,
+mesh, and observability settings live in each app's `values.yaml`. The rendered
+Deployments pin images by digest, enable Linkerd injection on the pod template,
+and add Alloy-compatible Prometheus scrape annotations. Order is exposed through Traefik at
 `http://order.a.lab.home`; Payment is cluster-internal and is called by Order at
 `http://payment-service`.
 
 The currently pinned images are:
 
 ```text
-registry.b.lab.home/k3s-lab/order-service:0.1.0-cloud-native.6cfb39d@sha256:8385fd89b17da1fcb9b11706bd135517e7f042562a7dbcfacdfbe97da7d3bf41
-registry.b.lab.home/k3s-lab/payment-service:0.1.0-cloud-native.6cfb39d@sha256:b0e4ca33fe2d13bddead00447bf249f04e3bd78e4fe9ca311121abd9b300806f
+registry.b.lab.home/k3s-lab/order-service:0.1.0@sha256:816d52b740cc89efdc19005df067cbaf9568219d1ffde5713790de13c9347677
+registry.b.lab.home/k3s-lab/payment-service:0.1.0@sha256:65b3023ac9168530d33d80397e50de623fdba9957ea6ec7654e298720cf0df04
 ```
 
 ## Clean rebuild smoke test

@@ -1,0 +1,84 @@
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+component: api
+partOf: spring-demo
+version: ""
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+image:
+  repository: ""
+  pullPolicy: IfNotPresent
+  tag: ""
+  digest: ""
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+containerPort: 8080
+
+env: []
+envFrom: []
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 80
+  targetPort: http
+
+ingress:
+  enabled: false
+  useHttpRoute: false
+  className: ""
+  annotations: {}
+  gateway:
+    name: traefik
+    namespace: traefik
+  hosts: []
+  tls: []
+
+pdb:
+  enabled: true
+  maxUnavailable: 1
+
+startupProbe: {}
+readinessProbe: {}
+livenessProbe: {}
+
+resources: {}
+
+volumes: []
+volumeMounts: []
+
+hostAliases: []
+terminationGracePeriodSeconds: null
+topologySpreadConstraints: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: null

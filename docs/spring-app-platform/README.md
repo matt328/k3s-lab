@@ -46,18 +46,13 @@ The current projects already demonstrate the beginning of the desired pattern:
 - the Payment API is published separately as a reusable artifact
 - Payment service generates its server delegate interface from the Payment API
 - Order service generates a Payment Feign client from the Payment API artifact
-- the Helm chart supports Deployment, Service, Ingress, HTTPRoute, and HPA
+- the vendored Helm chart supports Deployment, Service, Ingress, HTTPRoute, HPA,
+  and PodDisruptionBudget rendering for the lab services
 
 Important gaps to close before treating these as reference implementations:
 
-- the chart's default probes are not rendered because the template checks
-  `.Values.*Probe.enabled`, but the values file does not define `enabled`
-- fixing probe rendering before adding Actuator health groups would make the
-  Order deployment fail readiness/liveness checks
 - the OpenAPI artifact currently resolves from AWS CodeArtifact, so the lab
   needs a reproducible artifact access strategy
-- the first service deployments use raw Kustomize until the reusable Spring Boot
-  Helm chart is modernized
 
 ## Planning documents
 

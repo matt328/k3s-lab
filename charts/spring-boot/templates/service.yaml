@@ -1,0 +1,16 @@
+{{- if .Values.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "spring-boot.fullname" . }}
+  labels:
+    {{- include "spring-boot.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+  selector:
+    {{- include "spring-boot.selectorLabels" . | nindent 4 }}
+{{- end }}
