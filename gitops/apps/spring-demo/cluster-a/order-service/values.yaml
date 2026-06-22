@@ -1,14 +1,14 @@
 fullnameOverride: order-service
 component: api
 partOf: spring-demo
-version: 0.1.0-observability.f48acf0
+version: 0.1.0-observability.8a7d21a
 
 replicaCount: 1
 
 image:
   repository: registry.b.lab.home/k3s-lab/order-service
-  tag: 0.1.0-observability.f48acf0
-  digest: sha256:fad6e90186f1573ca2599f0635eecbbc877f1a7489bc09e784fb318f690cc7be
+  tag: 0.1.0-observability.8a7d21a
+  digest: sha256:6836b4b695246dea8e7879e7d642b63496875586f3488106c7a0a3111b84e76e
   pullPolicy: IfNotPresent
 
 podAnnotations:
