@@ -5,25 +5,31 @@ patterns.
 
 ## Topology
 
-| Hostname     | Cluster   | Role   | IP (default) | MAC (default)     |
-| ------------ | --------- | ------ | ------------ | ----------------- |
+The default local footprint is now just the two k3s servers, sized at 4 vCPU /
+4 GB each:
+
+| Hostname     | Cluster   | Role   | IP (default)  | MAC (default)     |
+| ------------ | --------- | ------ | ------------- | ----------------- |
 | k3s-a-master | cluster-a | server | 192.168.50.100 | 52:54:00:a1:00:01 |
-| k3s-a-agent  | cluster-a | agent  | 192.168.50.101 | 52:54:00:a1:00:02 |
 | k3s-b-master | cluster-b | server | 192.168.50.102 | 52:54:00:b1:00:01 |
-| k3s-b-agent  | cluster-b | agent  | 192.168.50.103 | 52:54:00:b1:00:02 |
 
-IPs and MACs are configurable via `.env.local`. All 4 VMs are bridged onto
-the host bridge (default `br0`) and are first-class LAN citizens.
+IPs and MACs are configurable via `.env.local`. All VMs are bridged onto their
+host bridge (default `br0`) and are first-class LAN citizens.
 
-Optional remote workers can add four more 4 vCPU / 6 GB agent VMs on a second
-libvirt host:
+For the full migration/observability topology, enable remote workers on two
+additional libvirt hosts:
 
-| Hostname       | Cluster   | Role  | IP (default)  | MAC (default)     |
-| -------------- | --------- | ----- | ------------- | ----------------- |
-| k3s-a-remote-1 | cluster-a | agent | 192.168.50.104 | 52:54:00:a1:00:11 |
-| k3s-a-remote-2 | cluster-a | agent | 192.168.50.105 | 52:54:00:a1:00:12 |
-| k3s-b-remote-1 | cluster-b | agent | 192.168.50.106 | 52:54:00:b1:00:11 |
-| k3s-b-remote-2 | cluster-b | agent | 192.168.50.107 | 52:54:00:b1:00:12 |
+| Host profile | Hostname        | Cluster   | Role  | IP (default)  | MAC (default)     | Size    |
+| ------------ | --------------- | --------- | ----- | ------------- | ----------------- | ------- |
+| `REMOTE_*`   | k3s-a-remote-1  | cluster-a | agent | 192.168.50.104 | 52:54:00:a1:00:11 | 4c/6 GB |
+| `REMOTE_*`   | k3s-a-remote-2  | cluster-a | agent | 192.168.50.105 | 52:54:00:a1:00:12 | 4c/6 GB |
+| `CITADEL_*`  | k3s-b-citadel-1 | cluster-b | agent | 192.168.50.106 | 52:54:00:b1:00:21 | 4c/6 GB |
+| `CITADEL_*`  | k3s-b-citadel-2 | cluster-b | agent | 192.168.50.107 | 52:54:00:b1:00:22 | 4c/6 GB |
+| `CITADEL_*`  | k3s-b-citadel-3 | cluster-b | agent | 192.168.50.108 | 52:54:00:b1:00:23 | 4c/6 GB |
+
+`LOCAL_AGENTS_ENABLED=true` can add the old local `k3s-a-agent` and
+`k3s-b-agent` VMs back for a temporary local-only fallback, but that is disabled
+by default to avoid workstation RAM pressure.
 
 ## Host prerequisites
 
@@ -41,7 +47,7 @@ real LAN IPs. See **Host bridge setup** below.
 
 All environment-specific values (IPs, MACs, networking, k3s tokens, GitOps
 repo URL, GHCR namespace) live in `.env.local`, which is gitignored.
-The default VM IPs use `192.168.50.100`-`192.168.50.107`, leaving the
+The default VM IPs use `192.168.50.100`-`192.168.50.108`, leaving the
 `192.168.50.2`-`192.168.50.99` DHCP pool and MetalLB pools untouched.
 
 ```bash
@@ -97,7 +103,7 @@ doesn't expose bridge-slave configuration well.
 ## Usage
 
 ```bash
-./scripts/up.sh                         # provision all 4 VMs and install k3s
+./scripts/up.sh                         # provision configured VMs and install k3s
 ./scripts/fetch-kubeconfigs.sh          # writes kubeconfigs/cluster-{a,b}.yaml
                                         # AND merges them into ~/.kube/config
                                         # (existing config is backed up first)
@@ -133,9 +139,14 @@ Register the VM hostnames in your local DNS server (`LAB_DNS` in `.env.local`):
 
 ```
 k3s-a-master.lab.home  192.168.50.100
-k3s-a-agent.lab.home   192.168.50.101
 k3s-b-master.lab.home  192.168.50.102
-k3s-b-agent.lab.home   192.168.50.103
+k3s-a-agent.lab.home   192.168.50.101  # only if LOCAL_AGENTS_ENABLED=true
+k3s-b-agent.lab.home   192.168.50.103  # only if LOCAL_AGENTS_ENABLED=true
+k3s-a-remote-1.lab.home  192.168.50.104
+k3s-a-remote-2.lab.home  192.168.50.105
+k3s-b-citadel-1.lab.home  192.168.50.106
+k3s-b-citadel-2.lab.home  192.168.50.107
+k3s-b-citadel-3.lab.home  192.168.50.108
 ```
 
 For application access, configure wildcard ingress zones on your Raspberry Pi
@@ -175,16 +186,20 @@ The provisioner restarts `k3s` only when the config changed.
 
 Each script is otherwise idempotent and can be re-run via `vagrant provision`.
 
-## Optional remote worker host
+## Optional remote worker hosts
 
-If the local machine is short on RAM, `.env.local` can enable four additional
-worker VMs on a separate libvirt host. They join the existing clusters as
-agents; they do not create new control planes.
+If the local machine is short on RAM, `.env.local` can enable agent VMs on
+remote libvirt hosts. They join the existing clusters as agents; they do not
+create new control planes. The intended full lab topology is:
+
+- existing remote host: two 4 vCPU / 6 GB cluster-A agents
+- `citadel`: three 4 vCPU / 6 GB cluster-B agents for Argo CD target workloads
+  and observability
 
 Hard prerequisites:
 
-- the remote host runs libvirt and is reachable by SSH from the local machine
-- the remote host has a bridge, usually `br0`, on the same L2 LAN/subnet as the
+- each remote host runs libvirt and is reachable by SSH from the local machine
+- each remote host has a bridge, usually `br0`, on the same L2 LAN/subnet as the
   local bridge
 - the remote worker IPs are free, outside DHCP, and outside the MetalLB pools
 - the remote libvirt user can access `qemu:///system` and write to the default
@@ -192,14 +207,23 @@ Hard prerequisites:
 - guest SSH must be proxied through the remote host because Vagrant provisions
   over libvirt's management network before the bridged static IP exists
 
-On the remote Fedora host, run the setup helper from a local console because
-creating the bridge can briefly drop the wired network:
+On each Fedora remote host, run the setup helper from a local console because
+creating the bridge can briefly drop the wired network.
+
+For the existing cluster-A worker host:
 
 ```bash
 ./scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0
 ```
 
-If you want the remote host itself to use the lab DNS resolver:
+For `citadel`:
+
+```bash
+./scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0 \
+  --env-prefix CITADEL
+```
+
+If you want either remote host itself to use the lab DNS resolver:
 
 ```bash
 ./scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0 \
@@ -214,10 +238,16 @@ REMOTE_LIBVIRT_URI=qemu+ssh://matt@idle-host/system
 REMOTE_LIBVIRT_SSH_PROXY_COMMAND="ssh -W %h:%p matt@idle-host"
 REMOTE_LAB_BRIDGE=br0
 
+CITADEL_LIBVIRT_ENABLED=true
+CITADEL_LIBVIRT_URI=qemu+ssh://matt@citadel/system
+CITADEL_LIBVIRT_SSH_PROXY_COMMAND="ssh -W %h:%p matt@citadel"
+CITADEL_LAB_BRIDGE=br0
+
 VM_A_REMOTE_1_IP=192.168.50.104
 VM_A_REMOTE_2_IP=192.168.50.105
-VM_B_REMOTE_1_IP=192.168.50.106
-VM_B_REMOTE_2_IP=192.168.50.107
+VM_B_CITADEL_1_IP=192.168.50.106
+VM_B_CITADEL_2_IP=192.168.50.107
+VM_B_CITADEL_3_IP=192.168.50.108
 ```
 
 Then run the normal deterministic provisioner:
@@ -231,6 +261,7 @@ Remote workers are labeled when they join:
 ```text
 lab.k3s.io/placement=remote
 lab.k3s.io/cluster=cluster-a|cluster-b
+lab.k3s.io/hypervisor=remote|citadel
 ```
 
 Adding workers increases scheduling capacity, but it does not automatically
@@ -243,7 +274,8 @@ otherwise Vagrant will hide those machines from this Vagrantfile while they may
 still be running on the remote host:
 
 ```bash
-vagrant destroy -f k3s-a-remote-1 k3s-a-remote-2 k3s-b-remote-1 k3s-b-remote-2
+vagrant destroy -f k3s-a-remote-1 k3s-a-remote-2 \
+  k3s-b-citadel-1 k3s-b-citadel-2 k3s-b-citadel-3
 ```
 
 ## Migration phases (planned)
@@ -254,7 +286,7 @@ script so the whole sequence is replayable.
 
 | Phase | What                                                                                        |
 | ----- | ------------------------------------------------------------------------------------------- |
-| 0     | **(done by this Vagrantfile)** Provision 4 VMs, install k3s, install Gateway API CRDs       |
+| 0     | **(done by this Vagrantfile)** Provision configured VMs, install k3s, install Gateway API CRDs |
 | 1     | Bootstrap Argo CD on cluster A; declaratively register cluster B                            |
 | 2     | Argo CD installs MetalLB and Traefik on both clusters; Argo CD gets LAN ingress             |
 | 3     | Install MinIO + observability stack on cluster B; install Alloy agents on both clusters     |

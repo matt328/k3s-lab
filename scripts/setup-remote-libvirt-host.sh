@@ -5,11 +5,12 @@
 # briefly drop networking, so prefer a local console.
 set -euo pipefail
 
-BRIDGE="${REMOTE_LAB_BRIDGE:-br0}"
+BRIDGE=""
 IFACE=""
 TARGET_USER="${SUDO_USER:-${USER:-}}"
 DNS_SERVERS=""
 DNS_SEARCH=""
+ENV_PREFIX="${REMOTE_LIBVIRT_ENV_PREFIX:-REMOTE}"
 IGNORE_AUTO_DNS=false
 INSTALL_VAGRANT=false
 SKIP_BRIDGE=false
@@ -26,9 +27,11 @@ Options:
                          If omitted, the script auto-detects exactly one
                          connected ethernet device.
   --bridge NAME          Bridge interface/connection name. Default: br0, or
-                         REMOTE_LAB_BRIDGE if set.
+                         <ENV_PREFIX>_LAB_BRIDGE if set.
   --user USER            User Vagrant will SSH as on this remote host. Default:
                          the sudo-invoking user.
+  --env-prefix PREFIX    Prefix for the .env.local output snippet. Default:
+                         REMOTE. Use CITADEL when preparing the citadel host.
   --dns "SERVERS"        Optional space-separated DNS servers for the bridge.
   --dns-search DOMAIN    Optional DNS search domain for the bridge.
   --ignore-auto-dns      Ignore DHCP-provided DNS on the bridge.
@@ -41,6 +44,8 @@ Options:
 
 Examples:
   scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0
+  scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0 \
+    --env-prefix CITADEL
   scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --dns "192.168.50.210" \
     --dns-search lab.home --ignore-auto-dns
 EOF
@@ -93,6 +98,11 @@ while [ "$#" -gt 0 ]; do
       [ -n "$TARGET_USER" ] || die "--user requires a value"
       shift 2
       ;;
+    --env-prefix)
+      ENV_PREFIX="${2:-}"
+      [ -n "$ENV_PREFIX" ] || die "--env-prefix requires a value"
+      shift 2
+      ;;
     --dns)
       DNS_SERVERS="${2:-}"
       [ -n "$DNS_SERVERS" ] || die "--dns requires a value"
@@ -134,6 +144,12 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$TARGET_USER" ] || die "could not determine target user; pass --user"
+[[ "$ENV_PREFIX" =~ ^[A-Z][A-Z0-9_]*$ ]] || die "--env-prefix must be uppercase letters, numbers, or underscores"
+
+if [ -z "$BRIDGE" ]; then
+  BRIDGE="$(printenv "${ENV_PREFIX}_LAB_BRIDGE" 2>/dev/null || true)"
+  BRIDGE="${BRIDGE:-br0}"
+fi
 
 detect_iface() {
   local candidates=()
@@ -387,7 +403,7 @@ cat <<EOF
 Remote libvirt host setup complete.
 
 Use these values in .env.local on the control machine:
-  REMOTE_LIBVIRT_URI=qemu+ssh://${TARGET_USER}@<remote-host>/system
-  REMOTE_LIBVIRT_SSH_PROXY_COMMAND="ssh -W %h:%p ${TARGET_USER}@<remote-host>"
-  REMOTE_LAB_BRIDGE=${BRIDGE}
+  ${ENV_PREFIX}_LIBVIRT_URI=qemu+ssh://${TARGET_USER}@<remote-host>/system
+  ${ENV_PREFIX}_LIBVIRT_SSH_PROXY_COMMAND="ssh -W %h:%p ${TARGET_USER}@<remote-host>"
+  ${ENV_PREFIX}_LAB_BRIDGE=${BRIDGE}
 EOF

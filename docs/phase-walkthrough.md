@@ -5,26 +5,32 @@ manifests in this repository.
 
 ## Phase 0: local clusters
 
-Phase 0 provisions two k3s clusters with Vagrant and libvirt:
+Phase 0 provisions two k3s clusters with Vagrant and libvirt. The default local
+footprint is intentionally small:
 
-- `cluster-a`: `k3s-a-master`, `k3s-a-agent`
-- `cluster-b`: `k3s-b-master`, `k3s-b-agent`
+- `cluster-a`: `k3s-a-master`
+- `cluster-b`: `k3s-b-master`
 
-Each VM is bridged to the LAN, statically addressed, and sized at 4 vCPU /
-6 GB by default. k3s bundled Traefik and ServiceLB are disabled because both
-are managed later by Argo CD. Gateway API standard CRDs are installed up front
-on both clusters.
+Each local VM is bridged to the LAN, statically addressed, and sized at 4 vCPU /
+4 GB by default. k3s bundled Traefik and ServiceLB are disabled because both are
+managed later by Argo CD. Gateway API standard CRDs are installed up front on
+both clusters.
 
-The Vagrantfile can optionally add four more agent nodes on a separate physical
-libvirt host:
+For the full migration/observability lab, the Vagrantfile can add remote worker
+capacity on two physical libvirt hosts:
 
 - `cluster-a`: `k3s-a-remote-1`, `k3s-a-remote-2`
-- `cluster-b`: `k3s-b-remote-1`, `k3s-b-remote-2`
+- `cluster-b`: `k3s-b-citadel-1`, `k3s-b-citadel-2`, `k3s-b-citadel-3`
 
-This mode is disabled by default and controlled by `.env.local`. The remote
+This mode is disabled by default and controlled by `.env.local`. Each remote
 host must bridge onto the same LAN as the local host so the remote agents can
 reach the local masters and advertise normal LAN IPs. Remote agents get
-`lab.k3s.io/placement=remote` labels for future workload placement.
+`lab.k3s.io/placement=remote` and `lab.k3s.io/hypervisor=<host>` labels for
+future workload placement.
+
+`LOCAL_AGENTS_ENABLED=true` can temporarily restore the old local
+`k3s-a-agent` and `k3s-b-agent` VMs, but the normal full-stack shape keeps those
+off the workstation.
 
 ## Phase 1: Argo CD bootstrap
 

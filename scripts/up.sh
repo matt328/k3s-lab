@@ -16,8 +16,16 @@ set -a
 [ -f .env.local ] && . ./.env.local
 set +a
 
-if [ "${REMOTE_LIBVIRT_ENABLED:-false}" = "true" ]; then
-  echo "Remote libvirt workers enabled; provisioning local and remote VMs."
+enabled_profiles=()
+[ "${LOCAL_AGENTS_ENABLED:-false}" = "true" ] && enabled_profiles+=("local agents")
+[ "${REMOTE_LIBVIRT_ENABLED:-false}" = "true" ] && enabled_profiles+=("cluster-A remote agents")
+[ "${CITADEL_LIBVIRT_ENABLED:-false}" = "true" ] && enabled_profiles+=("citadel cluster-B agents")
+
+if [ "${#enabled_profiles[@]}" -gt 0 ]; then
+  joined="$(printf '%s, ' "${enabled_profiles[@]}")"
+  printf 'Provisioning local masters plus: %s\n' "${joined%, }"
+else
+  echo "Provisioning local masters only."
 fi
 
 vagrant up --no-parallel
