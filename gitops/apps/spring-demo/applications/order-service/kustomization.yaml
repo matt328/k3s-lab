@@ -6,9 +6,6 @@ namespace: spring-demo
 helmGlobals:
   chartHome: ../../../../../charts
 
-resources:
-  - namespace.yaml
-
 helmCharts:
   - name: spring-boot
     releaseName: order-service

@@ -1,0 +1,50 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: spring-demo-cluster-b-enabled
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "56"
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: https://github.com/matt328/k3s-lab.git
+        revision: main
+        files:
+          - path: gitops/apps/spring-demo/applications/**/.eks-enabled
+  template:
+    metadata:
+      name: "spring-demo-cluster-b-{{ .path.path | dir | base }}"
+      namespace: argocd
+    spec:
+      project: platform
+      source:
+        repoURL: https://github.com/matt328/k3s-lab.git
+        targetRevision: main
+        path: "{{ .path.path | dir }}"
+        kustomize:
+          patches:
+            - target:
+                version: v1
+                kind: Service
+                name: "{{ .path.path | dir | base }}"
+              patch: |-
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: "{{ .path.path | dir | base }}"
+                  annotations:
+                    mirror.linkerd.io/exported: "true"
+      destination:
+        name: cluster-b
+        namespace: spring-demo
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - ApplyOutOfSyncOnly=true
+          - CreateNamespace=true
+          - FailOnSharedResource=true
+          - ServerSideApply=true

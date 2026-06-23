@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: spring-demo-cluster-a
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "55"
+spec:
+  goTemplate: true
+  generators:
+    - git:
+        repoURL: https://github.com/matt328/k3s-lab.git
+        revision: main
+        directories:
+          - path: gitops/apps/spring-demo/applications/*
+  template:
+    metadata:
+      name: "spring-demo-cluster-a-{{ .path.basename }}"
+      namespace: argocd
+    spec:
+      project: platform
+      source:
+        repoURL: https://github.com/matt328/k3s-lab.git
+        targetRevision: main
+        path: "{{ .path.path }}"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: spring-demo
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - ApplyOutOfSyncOnly=true
+          - CreateNamespace=true
+          - FailOnSharedResource=true
+          - ServerSideApply=true
