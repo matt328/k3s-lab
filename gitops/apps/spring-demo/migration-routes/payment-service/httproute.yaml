@@ -18,9 +18,9 @@ spec:
           group: ""
           kind: Service
           port: 80
-          weight: 100
+          weight: 90
         - name: payment-service-cluster-b
           group: ""
           kind: Service
           port: 80
-          weight: 0
+          weight: 10
