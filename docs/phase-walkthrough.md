@@ -210,6 +210,33 @@ The intended direction is:
 
 Planning now lives in `docs/spring-app-platform/`.
 
+### Phase 6: marker-based multicluster migration
+
+The lab migration flow now follows the same shape as the real on-premises to EKS
+plan. Spring app definitions are not duplicated per cluster. Instead:
+
+- `gitops/apps/spring-demo/applications/*` is the single source of truth for
+  each app.
+- `spring-demo-cluster-a` is an ApplicationSet with a directory generator, so
+  cluster A deploys every app directory.
+- `spring-demo-cluster-b-enabled` is an ApplicationSet with a file generator, so
+  cluster B deploys only apps containing `.eks-enabled`.
+- `payment-service` is currently opted into cluster B.
+- `spring-demo-migration-routes-cluster-a` deploys source-cluster-only
+  HTTPRoutes for Linkerd service-to-service traffic shifting.
+
+The initial Payment migration route is intentionally safe:
+
+```text
+payment-service: 100
+payment-service-cluster-b: 0
+```
+
+After confirming baseline traffic and dashboards, shift traffic by editing the
+weights in
+`gitops/apps/spring-demo/migration-routes/payment-service/httproute.yaml` and
+pushing the change through GitOps.
+
 ### Phase 5.1: lab-local Maven artifact registry
 
 The first implementation step is a Maven-compatible artifact repository for

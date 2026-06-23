@@ -206,12 +206,26 @@ Purpose: reuse the real Spring services for the original migration narrative.
 Payment is the first migration target because it is the leaf service behind
 Order in the initial call graph.
 
+Status: in progress. The lab now mirrors the real EKS migration plan's GitOps
+shape:
+
+- Spring workloads live once under `gitops/apps/spring-demo/applications/*`.
+- The cluster A ApplicationSet deploys every application directory, matching the
+  on-premises directory-generator model.
+- The cluster B ApplicationSet deploys only application directories that contain
+  `.eks-enabled`, matching the EKS marker-file opt-in model.
+- `payment-service` is the first opted-in workload.
+- Source-cluster traffic shifting is managed separately under
+  `gitops/apps/spring-demo/migration-routes/*` so migration routes apply only to
+  cluster A.
+
 Work items:
 
-- deploy Payment service to cluster B
-- export Payment with Linkerd multicluster
-- configure Order to target the correct local or mirrored Payment service name
-- introduce explicit traffic-splitting resources or a stable parent service
+- deploy Payment service to cluster B by adding `.eks-enabled`
+- export Payment with Linkerd multicluster from the cluster B generated
+  Application
+- introduce a source-cluster-only Linkerd HTTPRoute using the Gateway API GAMMA
+  Service `parentRef` pattern
 - shift Payment traffic gradually from cluster A to cluster B
 - validate traces, logs, and metrics across the shift
 
@@ -221,3 +235,16 @@ Acceptance criteria:
 - traffic weights can be changed deliberately and observed in Grafana
 - no callers use hard-coded IPs
 - cross-cluster failures are visible and recoverable
+
+Current safe starting point:
+
+```text
+payment-service local cluster A weight: 100
+payment-service mirrored cluster B weight: 0
+```
+
+To begin the first traffic shift, edit
+`gitops/apps/spring-demo/migration-routes/payment-service/httproute.yaml` and
+change the backend weights to `90` / `10`, commit, and push. Continue with
+`75` / `25`, `50` / `50`, `25` / `75`, and `0` / `100` if the observability
+dashboards stay healthy.
