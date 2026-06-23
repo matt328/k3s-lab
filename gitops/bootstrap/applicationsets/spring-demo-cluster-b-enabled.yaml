@@ -15,25 +15,25 @@ spec:
           - path: gitops/apps/spring-demo/applications/**/.eks-enabled
   template:
     metadata:
-      name: "spring-demo-cluster-b-{{ .path.path | dir | base }}"
+      name: "spring-demo-cluster-b-{{ .path.basename }}"
       namespace: argocd
     spec:
       project: platform
       source:
         repoURL: https://github.com/matt328/k3s-lab.git
         targetRevision: main
-        path: "{{ .path.path | dir }}"
+        path: "{{ .path.path }}"
         kustomize:
           patches:
             - target:
                 version: v1
                 kind: Service
-                name: "{{ .path.path | dir | base }}"
+                name: "{{ .path.basename }}"
               patch: |-
                 apiVersion: v1
                 kind: Service
                 metadata:
-                  name: "{{ .path.path | dir | base }}"
+                  name: "{{ .path.basename }}"
                   annotations:
                     mirror.linkerd.io/exported: "true"
       destination:
