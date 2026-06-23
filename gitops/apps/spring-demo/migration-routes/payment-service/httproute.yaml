@@ -9,10 +9,18 @@ spec:
       name: payment-service
       port: 80
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
         - name: payment-service
+          group: ""
+          kind: Service
           port: 80
           weight: 100
         - name: payment-service-cluster-b
+          group: ""
+          kind: Service
           port: 80
           weight: 0
