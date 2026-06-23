@@ -34,7 +34,7 @@ spec:
                 kind: Service
                 metadata:
                   name: "{{ .path.basename }}"
-                  annotations:
+                  labels:
                     mirror.linkerd.io/exported: "true"
       destination:
         name: cluster-b

@@ -1,10 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: spring-demo-cluster-a
+  name: spring-demo-migration-routes-cluster-a
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "55"
+    argocd.argoproj.io/sync-wave: "65"
 spec:
   goTemplate: true
   generators:
@@ -12,10 +12,10 @@ spec:
         repoURL: https://github.com/matt328/k3s-lab.git
         revision: main
         directories:
-          - path: gitops/apps/spring-demo/applications/*
+          - path: gitops/apps/spring-demo/migration-routes/*
   template:
     metadata:
-      name: "spring-demo-cluster-a-{{ .path.basename }}"
+      name: "spring-demo-migration-route-{{ .path.basename }}"
       namespace: argocd
     spec:
       project: platform

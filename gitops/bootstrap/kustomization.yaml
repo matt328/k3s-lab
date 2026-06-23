@@ -21,3 +21,4 @@ resources:
   - applications/alloy-cluster-b.yaml
   - applicationsets/spring-demo-cluster-a.yaml
   - applicationsets/spring-demo-cluster-b-enabled.yaml
+  - applicationsets/spring-demo-migration-routes-cluster-a.yaml
