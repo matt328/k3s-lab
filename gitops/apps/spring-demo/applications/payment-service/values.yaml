@@ -1,14 +1,14 @@
 fullnameOverride: payment-service
 component: api
 partOf: spring-demo
-version: 0.1.0-observability.8a7d21a
+version: 0.1.0-observability.9669693
 
 replicaCount: 1
 
 image:
   repository: registry.b.lab.home/k3s-lab/payment-service
-  tag: 0.1.0-observability.8a7d21a
-  digest: sha256:4e392303de15eef9cf8475000fa9987e90c59562912e4e6d17725ab36d61c655
+  tag: 0.1.0-observability.9669693
+  digest: sha256:d6229ed30550d06cfe1d83ffc54590d826caca665f553f8d855a5b3d419b6c18
   pullPolicy: IfNotPresent
 
 podAnnotations:
