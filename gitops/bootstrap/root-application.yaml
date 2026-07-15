@@ -8,7 +8,6 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/matt328/k3s-lab.git
     targetRevision: main
     path: gitops/bootstrap
   destination:

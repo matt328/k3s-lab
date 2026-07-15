@@ -4,7 +4,7 @@ set -euo pipefail
 url_template="http://order.a.lab.home/orders/{id}"
 method="GET"
 body=""
-duration_seconds=300
+duration_seconds=1200
 rate_per_second=2
 concurrency=1
 timeout_seconds=5

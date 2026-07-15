@@ -9,7 +9,7 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=lib/env.sh
 source "${script_dir}/lib/env.sh"
 
-require_env VM_B_MASTER_IP
+require_env CLUSTER_B_SERVER_1_IP
 
 cluster_a_context="${CLUSTER_A_CONTEXT:-cluster-a}"
 cluster_b_context="${CLUSTER_B_CONTEXT:-cluster-b}"
@@ -54,7 +54,7 @@ fi
 
 token="$(printf '%s' "${token_data}" | base64 -d)"
 ca_data="$(kubectl --context "${cluster_b_context}" config view --raw -o jsonpath='{.clusters[?(@.name=="cluster-b")].cluster.certificate-authority-data}')"
-server="https://${VM_B_MASTER_IP}:6443"
+server="https://${CLUSTER_B_SERVER_1_IP}:6443"
 
 config_json="$(kubectl create configmap cluster-b-config \
   --from-literal=config="{\"bearerToken\":\"${token}\",\"tlsClientConfig\":{\"insecure\":false,\"caData\":\"${ca_data}\"}}" \

@@ -22,3 +22,46 @@ resources:
   - applicationsets/spring-demo-cluster-a.yaml
   - applicationsets/spring-demo-cluster-b-enabled.yaml
   - applicationsets/spring-demo-migration-routes-cluster-a.yaml
+
+configMapGenerator:
+  - name: gitops-repo-config
+    envs:
+      - repo-config.env
+    options:
+      annotations:
+        config.kubernetes.io/local-config: "true"
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: gitops-repo-config
+      fieldPath: data.GITOPS_REPO_URL
+    targets:
+      - select:
+          group: argoproj.io
+          version: v1alpha1
+          kind: AppProject
+        fieldPaths:
+          - spec.sourceRepos.0
+        options:
+          create: true
+      - select:
+          group: argoproj.io
+          version: v1alpha1
+          kind: Application
+        fieldPaths:
+          - spec.source.repoURL
+        options:
+          create: true
+      - select:
+          group: argoproj.io
+          version: v1alpha1
+          kind: ApplicationSet
+        fieldPaths:
+          - spec.generators.0.git.repoURL
+          - spec.template.spec.source.repoURL
+        options:
+          create: true

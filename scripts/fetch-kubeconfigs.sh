@@ -14,12 +14,12 @@ set -a
 [ -f .env.local ] && . ./.env.local
 set +a
 
-: "${VM_A_MASTER_IP:?}"
-: "${VM_B_MASTER_IP:?}"
+: "${CLUSTER_A_SERVER_1_IP:?}"
+: "${CLUSTER_B_SERVER_1_IP:?}"
 
 declare -A MASTERS=(
-  ["cluster-a"]="k3s-a-master:${VM_A_MASTER_IP}"
-  ["cluster-b"]="k3s-b-master:${VM_B_MASTER_IP}"
+  ["cluster-a"]="k3s-a-server-1:${CLUSTER_A_SERVER_1_IP}"
+  ["cluster-b"]="k3s-b-server-1:${CLUSTER_B_SERVER_1_IP}"
 )
 
 for cluster in "${!MASTERS[@]}"; do

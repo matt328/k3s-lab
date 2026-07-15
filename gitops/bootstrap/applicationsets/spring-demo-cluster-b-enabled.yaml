@@ -9,7 +9,6 @@ spec:
   goTemplate: true
   generators:
     - git:
-        repoURL: https://github.com/matt328/k3s-lab.git
         revision: main
         files:
           - path: gitops/apps/spring-demo/applications/**/.eks-enabled
@@ -20,7 +19,6 @@ spec:
     spec:
       project: platform
       source:
-        repoURL: https://github.com/matt328/k3s-lab.git
         targetRevision: main
         path: "{{ .path.path }}"
         kustomize:

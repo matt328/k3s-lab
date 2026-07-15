@@ -8,7 +8,6 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: https://github.com/matt328/k3s-lab.git
     targetRevision: main
     path: gitops/infra/container-registry/cluster-b
   destination:
@@ -20,4 +19,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-

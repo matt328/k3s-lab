@@ -5,8 +5,7 @@ metadata:
   namespace: argocd
 spec:
   description: Platform components for the k3s migration lab
-  sourceRepos:
-    - https://github.com/matt328/k3s-lab.git
+  sourceRepos: []
   destinations:
     - namespace: '*'
       server: https://kubernetes.default.svc

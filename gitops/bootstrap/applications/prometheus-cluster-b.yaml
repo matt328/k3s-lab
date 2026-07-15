@@ -8,7 +8,6 @@ metadata:
 spec:
   project: platform
   source:
-    repoURL: https://github.com/matt328/k3s-lab.git
     targetRevision: main
     path: gitops/infra/prometheus/cluster-b
   destination:

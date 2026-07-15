@@ -17,9 +17,9 @@ set -a
 set +a
 
 enabled_profiles=()
-[ "${LOCAL_AGENTS_ENABLED:-false}" = "true" ] && enabled_profiles+=("local agents")
-[ "${REMOTE_LIBVIRT_ENABLED:-false}" = "true" ] && enabled_profiles+=("cluster-A remote agents")
-[ "${CITADEL_LIBVIRT_ENABLED:-false}" = "true" ] && enabled_profiles+=("citadel cluster-B agents")
+[ "${HOST_LOCAL_WORKERS_ENABLED:-false}" = "true" ] && enabled_profiles+=("local workers")
+[ "${HOST_1_ENABLED:-false}" = "true" ] && enabled_profiles+=("HOST_1 cluster-A workers")
+[ "${HOST_2_ENABLED:-false}" = "true" ] && enabled_profiles+=("HOST_2 cluster-B workers")
 
 if [ "${#enabled_profiles[@]}" -gt 0 ]; then
   joined="$(printf '%s, ' "${enabled_profiles[@]}")"

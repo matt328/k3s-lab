@@ -4,9 +4,8 @@
 # k3s multi-cluster lab — Vagrant + libvirt
 #
 # Two clusters (A, B), each with a local server bridged onto the LAB_BRIDGE
-# interface with pinned MACs and static LAN IPs. Optional worker profiles can add
-# local agents, cluster-A agents on one remote libvirt host, and cluster-B agents
-# on a second remote libvirt host named citadel.
+# interface with pinned MACs and static LAN IPs. HOST_* settings describe the
+# physical libvirt hosts; CLUSTER_* settings describe the k3s nodes.
 #
 # All environment-specific values (IPs, MACs, networking, tokens, etc.) live
 # in .env.local. Copy .env.example to .env.local and edit before running.
@@ -60,8 +59,8 @@ CLUSTER_TOKENS = {
 }
 
 MASTER_IPS = {
-  "a" => cfg("VM_A_MASTER_IP"),
-  "b" => cfg("VM_B_MASTER_IP"),
+  "a" => cfg("CLUSTER_A_SERVER_1_IP"),
+  "b" => cfg("CLUSTER_B_SERVER_1_IP"),
 }
 
 NETWORK = {
@@ -75,129 +74,126 @@ NETWORK = {
 GATEWAY_API_VERSION = cfg("GATEWAY_API_VERSION")
 LAB_OCI_REGISTRY_HOST = cfg("LAB_OCI_REGISTRY_HOST")
 LAB_OCI_REGISTRY_IP = cfg("LAB_OCI_REGISTRY_IP")
-VM_VCPUS     = cfg("VM_VCPUS").to_i
-VM_MEMORY_MB = cfg("VM_MEMORY_MB").to_i
-
-def remote_libvirt_profile(prefix, default_bridge:, default_vcpus:, default_memory_mb:, default_hypervisor:)
-  enabled = cfg_bool("#{prefix}_LIBVIRT_ENABLED")
+def host_profile(prefix, local: false, default_label:)
+  enabled = local || cfg_bool("#{prefix}_ENABLED")
   {
-    enabled:           enabled,
-    placement:         "remote",
-    hypervisor:        cfg_default("#{prefix}_HYPERVISOR_LABEL", default_hypervisor),
-    uri:               cfg("#{prefix}_LIBVIRT_URI", required: enabled),
-    ssh_proxy_command: cfg("#{prefix}_LIBVIRT_SSH_PROXY_COMMAND", required: enabled),
-    bridge:            cfg_default("#{prefix}_LAB_BRIDGE", default_bridge),
-    vcpus:             cfg_default("#{prefix}_VM_VCPUS", default_vcpus.to_s).to_i,
-    memory_mb:         cfg_default("#{prefix}_VM_MEMORY_MB", default_memory_mb.to_s).to_i,
+    enabled: enabled,
+    placement: local ? "local" : "remote",
+    label: cfg_default("#{prefix}_LABEL", default_label),
+    bridge: cfg_default("#{prefix}_BRIDGE", NETWORK[:bridge]),
+    vcpus: cfg("#{prefix}_VM_VCPUS").to_i,
+    memory_mb: cfg("#{prefix}_VM_MEMORY_MB").to_i,
+    libvirt_uri: local ? nil : cfg("#{prefix}_URI", required: enabled),
+    ssh_proxy_command: local ? nil : cfg("#{prefix}_SSH_PROXY_COMMAND", required: enabled),
   }
 end
 
-LOCAL_AGENTS_ENABLED = cfg_bool("LOCAL_AGENTS_ENABLED")
-REMOTE_LIBVIRT = remote_libvirt_profile(
-  "REMOTE",
-  default_bridge: NETWORK[:bridge],
-  default_vcpus: VM_VCPUS,
-  default_memory_mb: VM_MEMORY_MB,
-  default_hypervisor: "remote",
-)
-CITADEL_LIBVIRT = remote_libvirt_profile(
-  "CITADEL",
-  default_bridge: NETWORK[:bridge],
-  default_vcpus: VM_VCPUS,
-  default_memory_mb: VM_MEMORY_MB,
-  default_hypervisor: "citadel",
-)
-
-LOCAL_NODE_DEFAULTS = {
-  placement: "local",
-  hypervisor: cfg_default("LOCAL_HYPERVISOR_LABEL", "local"),
-  bridge: NETWORK[:bridge],
-  vcpus: VM_VCPUS,
-  memory_mb: VM_MEMORY_MB,
+HOSTS = {
+  "HOST_LOCAL" => host_profile("HOST_LOCAL", local: true, default_label: "local"),
+  "HOST_1" => host_profile("HOST_1", default_label: "host-1"),
+  "HOST_2" => host_profile("HOST_2", default_label: "host-2"),
 }
 
-def remote_node_defaults(profile)
+HOST_LOCAL_WORKERS_ENABLED = cfg_bool("HOST_LOCAL_WORKERS_ENABLED")
+
+def node_from_env(env_prefix, name:, role:, cluster:, default_host:)
+  host_key = cfg_default("#{env_prefix}_HOST", default_host)
+  profile = HOSTS[host_key]
+  abort "config: #{env_prefix}_HOST references unknown host profile '#{host_key}'." unless profile
+
   {
-    placement: profile[:placement],
-    hypervisor: profile[:hypervisor],
-    bridge: profile[:bridge],
-    vcpus: profile[:vcpus],
-    memory_mb: profile[:memory_mb],
-    libvirt_uri: profile[:uri],
-    ssh_proxy_command: profile[:ssh_proxy_command],
-  }
+    name: name,
+    role: role,
+    cluster: cluster,
+    ip: cfg("#{env_prefix}_IP"),
+    mac: cfg("#{env_prefix}_MAC"),
+    host_key: host_key,
+  }.merge(profile)
 end
 
 BASE_NODES = [
-  {
-    name: "k3s-a-master",
+  node_from_env(
+    "CLUSTER_A_SERVER_1",
+    name: "k3s-a-server-1",
     role: "server",
     cluster: "a",
-    ip: cfg("VM_A_MASTER_IP"),
-    mac: cfg("VM_A_MASTER_MAC"),
-  }.merge(LOCAL_NODE_DEFAULTS),
-  {
-    name: "k3s-b-master",
+    default_host: "HOST_LOCAL",
+  ),
+  node_from_env(
+    "CLUSTER_B_SERVER_1",
+    name: "k3s-b-server-1",
     role: "server",
     cluster: "b",
-    ip: cfg("VM_B_MASTER_IP"),
-    mac: cfg("VM_B_MASTER_MAC"),
-  }.merge(LOCAL_NODE_DEFAULTS),
+    default_host: "HOST_LOCAL",
+  ),
 ]
 
-LOCAL_AGENT_NODES = if LOCAL_AGENTS_ENABLED
+LOCAL_WORKER_NODES = if HOST_LOCAL_WORKERS_ENABLED
   [
-    { name: "k3s-a-agent", role: "agent", cluster: "a", ip: cfg("VM_A_AGENT_IP"), mac: cfg("VM_A_AGENT_MAC") },
-    { name: "k3s-b-agent", role: "agent", cluster: "b", ip: cfg("VM_B_AGENT_IP"), mac: cfg("VM_B_AGENT_MAC") },
-  ].map { |node| node.merge(LOCAL_NODE_DEFAULTS) }
+    node_from_env(
+      "CLUSTER_A_LOCAL_WORKER_1",
+      name: "k3s-a-local-worker-1",
+      role: "agent",
+      cluster: "a",
+      default_host: "HOST_LOCAL",
+    ),
+    node_from_env(
+      "CLUSTER_B_LOCAL_WORKER_1",
+      name: "k3s-b-local-worker-1",
+      role: "agent",
+      cluster: "b",
+      default_host: "HOST_LOCAL",
+    ),
+  ]
 else
   []
 end
 
-REMOTE_NODES = if REMOTE_LIBVIRT[:enabled]
-  [
-    { name: "k3s-a-remote-1", role: "agent", cluster: "a", ip: cfg("VM_A_REMOTE_1_IP"), mac: cfg("VM_A_REMOTE_1_MAC") },
-    { name: "k3s-a-remote-2", role: "agent", cluster: "a", ip: cfg("VM_A_REMOTE_2_IP"), mac: cfg("VM_A_REMOTE_2_MAC") },
-  ].map { |node| node.merge(remote_node_defaults(REMOTE_LIBVIRT)) }
-else
-  []
-end
+WORKER_NODES = [
+  node_from_env(
+    "CLUSTER_A_WORKER_1",
+    name: "k3s-a-worker-1",
+    role: "agent",
+    cluster: "a",
+    default_host: "HOST_1",
+  ),
+  node_from_env(
+    "CLUSTER_A_WORKER_2",
+    name: "k3s-a-worker-2",
+    role: "agent",
+    cluster: "a",
+    default_host: "HOST_1",
+  ),
+  node_from_env(
+    "CLUSTER_B_WORKER_1",
+    name: "k3s-b-worker-1",
+    role: "agent",
+    cluster: "b",
+    default_host: "HOST_2",
+  ),
+  node_from_env(
+    "CLUSTER_B_WORKER_2",
+    name: "k3s-b-worker-2",
+    role: "agent",
+    cluster: "b",
+    default_host: "HOST_2",
+  ),
+  node_from_env(
+    "CLUSTER_B_WORKER_3",
+    name: "k3s-b-worker-3",
+    role: "agent",
+    cluster: "b",
+    default_host: "HOST_2",
+  ),
+].select { |node| node[:enabled] }
 
-CITADEL_NODES = if CITADEL_LIBVIRT[:enabled]
-  [
-    {
-      name: "k3s-b-citadel-1",
-      role: "agent",
-      cluster: "b",
-      ip: cfg("VM_B_CITADEL_1_IP"),
-      mac: cfg("VM_B_CITADEL_1_MAC"),
-    },
-    {
-      name: "k3s-b-citadel-2",
-      role: "agent",
-      cluster: "b",
-      ip: cfg("VM_B_CITADEL_2_IP"),
-      mac: cfg("VM_B_CITADEL_2_MAC"),
-    },
-    {
-      name: "k3s-b-citadel-3",
-      role: "agent",
-      cluster: "b",
-      ip: cfg("VM_B_CITADEL_3_IP"),
-      mac: cfg("VM_B_CITADEL_3_MAC"),
-    },
-  ].map { |node| node.merge(remote_node_defaults(CITADEL_LIBVIRT)) }
-else
-  []
-end
-
-NODES = BASE_NODES + LOCAL_AGENT_NODES + REMOTE_NODES + CITADEL_NODES
+NODES = BASE_NODES + LOCAL_WORKER_NODES + WORKER_NODES
 
 def node_labels(node)
   [
     "lab.k3s.io/cluster=cluster-#{node[:cluster]}",
     "lab.k3s.io/placement=#{node[:placement]}",
-    "lab.k3s.io/hypervisor=#{node[:hypervisor]}",
+    "lab.k3s.io/host=#{node[:label]}",
   ].join(",")
 end
 
@@ -226,7 +222,12 @@ Vagrant.configure("2") do |config|
         lv.proxy_command        = node[:ssh_proxy_command] if node[:ssh_proxy_command]
       end
 
-      # 1. pin the bridged NIC to its static LAN IP
+      # 1. raise node kernel limits before Kubernetes components start
+      vm.vm.provision "shell",
+        name: "configure node sysctl",
+        path: "scripts/configure-node-sysctl.sh"
+
+      # 2. pin the bridged NIC to its static LAN IP
       vm.vm.provision "shell",
         name: "configure static IP",
         path: "scripts/configure-static-ip.sh",
@@ -239,7 +240,7 @@ Vagrant.configure("2") do |config|
           "DOMAIN"  => NETWORK[:domain],
         }
 
-      # 2. install k3s (server or agent)
+      # 3. install k3s (server or agent)
       if node[:role] == "server"
         vm.vm.provision "shell",
           name: "install k3s server",

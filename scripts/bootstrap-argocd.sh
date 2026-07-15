@@ -23,6 +23,21 @@ if ! git ls-remote --exit-code "${GITOPS_REPO_URL}" "${GITOPS_REPO_REVISION}" >/
   exit 1
 fi
 
+repo_config_file="${repo_root}/${GITOPS_REPO_PATH}/bootstrap/repo-config.env"
+if [ ! -f "${repo_config_file}" ]; then
+  echo "error: ${repo_config_file} does not exist." >&2
+  exit 1
+fi
+
+bootstrap_repo_url="$(sed -n 's/^GITOPS_REPO_URL=//p' "${repo_config_file}" | tail -n 1)"
+if [ "${bootstrap_repo_url}" != "${GITOPS_REPO_URL}" ]; then
+  echo "error: ${repo_config_file} must match .env.local GITOPS_REPO_URL." >&2
+  echo "  .env.local: ${GITOPS_REPO_URL}" >&2
+  echo "  ${repo_config_file}: ${bootstrap_repo_url}" >&2
+  echo "Update ${repo_config_file}, commit it, and push before bootstrapping Argo CD." >&2
+  exit 1
+fi
+
 if ! kubectl kustomize --help 2>&1 | grep -q -- '--enable-helm'; then
   echo "error: kubectl kustomize does not support --enable-helm." >&2
   exit 1
@@ -47,8 +62,9 @@ kubectl --context "${cluster_a_context}" -n "${namespace}" rollout status deploy
 
 "${script_dir}/register-cluster-b.sh"
 
-echo "applying root bootstrap Application"
-kubectl --context "${cluster_a_context}" apply -f gitops/bootstrap/root-application.yaml
+echo "applying GitOps bootstrap Applications"
+kubectl kustomize "${GITOPS_REPO_PATH}/bootstrap" \
+  | kubectl --context "${cluster_a_context}" apply -f -
 
 echo
 echo "Argo CD bootstrap complete."
