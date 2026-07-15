@@ -1,14 +1,14 @@
 fullnameOverride: order-service
 component: api
 partOf: spring-demo
-version: 0.1.0-observability.9669693
+version: 0.1.0
 
 replicaCount: 1
 
 image:
   repository: $(REGISTRY_IMAGE_PREFIX)/order-service
-  tag: 0.1.0-observability.9669693
-  digest: sha256:f34ff9e237cff8bb35bade667ee74bf5818a6ab3e220141e935fec58260b7ce4
+  tag: 0.1.0
+  digest: sha256:5c959f3598c8312677b2de8b60ae456a70bd046365fe274e0a95b56e48972c90
   pullPolicy: IfNotPresent
 
 podAnnotations:

@@ -1,14 +1,14 @@
 fullnameOverride: payment-service
 component: api
 partOf: spring-demo
-version: 0.1.0-observability.9669693
+version: 0.1.0
 
 replicaCount: 1
 
 image:
   repository: $(REGISTRY_IMAGE_PREFIX)/payment-service
-  tag: 0.1.0-observability.9669693
-  digest: sha256:d6229ed30550d06cfe1d83ffc54590d826caca665f553f8d855a5b3d419b6c18
+  tag: 0.1.0
+  digest: sha256:3856a4a943c08041265739377afe00e18625f54151e4f5614460755fe605fe02
   pullPolicy: IfNotPresent
 
 podAnnotations:
