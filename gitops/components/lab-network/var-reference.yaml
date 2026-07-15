@@ -1,0 +1,21 @@
+varReference:
+  - path: data/values
+    kind: ConfigMap
+  - path: metadata/annotations/metallb.universe.tf/loadBalancerIPs
+    kind: Service
+  - path: spec/addresses
+    kind: IPAddressPool
+  - path: spec/rules/host
+    kind: Ingress
+  - path: spec/template/spec/containers/env/value
+    kind: Deployment
+  - path: spec/template/spec/containers/image
+    kind: Deployment
+  - path: spec/template/spec/hostAliases/ip
+    kind: Deployment
+  - path: spec/template/spec/hostAliases/hostnames
+    kind: Deployment
+  - path: data/config.alloy
+    kind: ConfigMap
+  - path: data/grafana.ini
+    kind: ConfigMap

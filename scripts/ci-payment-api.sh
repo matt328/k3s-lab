@@ -8,7 +8,7 @@ source "${repo_root}/scripts/lib/env.sh"
 mode="${1:-}"
 branch_name="${2:-$(git -C "${repo_root}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo local)}"
 project_dir="${repo_root}/apps/apis/payment-api"
-repository_url="${PAYMENT_API_MAVEN_REPOSITORY_URL:-${ARTIFACT_REGISTRY_URL:-http://maven.b.lab.home}/releases}"
+repository_url="${PAYMENT_API_MAVEN_REPOSITORY_URL:-${ARTIFACT_REGISTRY_RELEASES_URL:?}}"
 username="${ARTIFACT_REGISTRY_ADMIN_USER:-admin}"
 token_file="${ARTIFACT_REGISTRY_TOKEN_FILE:-${repo_root}/.secrets/reposilite/admin-token}"
 

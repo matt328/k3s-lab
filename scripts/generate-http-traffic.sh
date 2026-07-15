@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-url_template="http://order.a.lab.home/orders/{id}"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/env.sh
+source "${script_dir}/lib/env.sh"
+
+url_template="${HTTP_TRAFFIC_URL_TEMPLATE:?}"
 method="GET"
 body=""
 duration_seconds=1200
@@ -11,14 +15,14 @@ timeout_seconds=5
 headers=()
 
 usage() {
-  cat <<'EOF'
+  cat <<EOF
 usage: scripts/generate-http-traffic.sh [options]
 
 Generate steady HTTP traffic and print success/failure/latency statistics.
 
 Options:
   --url URL             Target URL. Use {id} to inject a generated request id.
-                        Default: http://order.a.lab.home/orders/{id}
+                        Default: ${HTTP_TRAFFIC_URL_TEMPLATE}
   --method METHOD      HTTP method. Default: GET
   --body BODY          Request body for POST/PUT/PATCH style requests.
   --header HEADER      Header to pass to curl. May be repeated.

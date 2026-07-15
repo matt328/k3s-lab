@@ -8,8 +8,8 @@ source "${repo_root}/scripts/lib/env.sh"
 mode="${1:-}"
 branch_name="${2:-$(git -C "${repo_root}" rev-parse --abbrev-ref HEAD 2>/dev/null || echo local)}"
 project_dir="${repo_root}/apps/services/payment-service"
-maven_repository_url="${PAYMENT_API_MAVEN_REPOSITORY_URL:-${ARTIFACT_REGISTRY_URL:-http://maven.b.lab.home}/releases}"
-image_repository="${PAYMENT_SERVICE_IMAGE_REPOSITORY:-${LAB_OCI_REGISTRY_HOST:-registry.b.lab.home}/k3s-lab/payment-service}"
+maven_repository_url="${PAYMENT_API_MAVEN_REPOSITORY_URL:-${ARTIFACT_REGISTRY_RELEASES_URL:?}}"
+image_repository="${PAYMENT_SERVICE_IMAGE_REPOSITORY:?}"
 payment_api_version="${PAYMENT_API_VERSION:-0.1.0}"
 
 if [ "${mode}" != "feature" ] && [ "${mode}" != "main" ]; then

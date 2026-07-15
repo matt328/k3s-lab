@@ -1,0 +1,88 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - var-sink.yaml
+
+configMapGenerator:
+  - name: lab-network-config
+    envs:
+      - lab-network.env
+    options:
+      annotations:
+        config.kubernetes.io/local-config: "true"
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configurations:
+  - var-reference.yaml
+
+vars:
+  - name: CLUSTER_A_INGRESS_IP
+    objref: &labNetworkConfig
+      apiVersion: v1
+      kind: ConfigMap
+      name: lab-network-config
+    fieldref:
+      fieldpath: data.CLUSTER_A_INGRESS_IP
+  - name: CLUSTER_B_INGRESS_IP
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.CLUSTER_B_INGRESS_IP
+  - name: METALLB_A_POOL
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.METALLB_A_POOL
+  - name: METALLB_B_POOL
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.METALLB_B_POOL
+  - name: ARGOCD_HOST
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.ARGOCD_HOST
+  - name: GRAFANA_HOST
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.GRAFANA_HOST
+  - name: LOKI_HOST
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.LOKI_HOST
+  - name: PROMETHEUS_HOST
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.PROMETHEUS_HOST
+  - name: TEMPO_HOST
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.TEMPO_HOST
+  - name: MAVEN_HOST
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.MAVEN_HOST
+  - name: REGISTRY_HOST
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.REGISTRY_HOST
+  - name: ORDER_HOST
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.ORDER_HOST
+  - name: TEMPO_OTLP_ENDPOINT
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.TEMPO_OTLP_ENDPOINT
+  - name: LOKI_PUSH_URL
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.LOKI_PUSH_URL
+  - name: PROMETHEUS_REMOTE_WRITE_URL
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.PROMETHEUS_REMOTE_WRITE_URL
+  - name: REGISTRY_IMAGE_PREFIX
+    objref: *labNetworkConfig
+    fieldref:
+      fieldpath: data.REGISTRY_IMAGE_PREFIX

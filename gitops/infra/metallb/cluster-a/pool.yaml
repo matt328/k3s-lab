@@ -8,7 +8,7 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   addresses:
-    - 192.168.50.240-192.168.50.244
+    - $(METALLB_A_POOL)
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement

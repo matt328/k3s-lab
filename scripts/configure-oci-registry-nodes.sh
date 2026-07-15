@@ -5,8 +5,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/lib/env.sh
 source "${repo_root}/scripts/lib/env.sh"
 
-registry_host="${LAB_OCI_REGISTRY_HOST:-registry.b.lab.home}"
-registry_ip="${LAB_OCI_REGISTRY_IP:-${CLUSTER_B_INGRESS_IP:-192.168.50.245}}"
+registry_host="${LAB_OCI_REGISTRY_HOST:?}"
+registry_ip="${LAB_OCI_REGISTRY_IP:-${CLUSTER_B_INGRESS_IP:?}}"
 
 running_nodes="$(vagrant status --machine-readable | awk -F, '$3 == "state" && $4 == "running" { print $2 }')"
 

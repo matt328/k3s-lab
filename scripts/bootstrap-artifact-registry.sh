@@ -10,6 +10,9 @@ namespace="${ARTIFACT_REGISTRY_NAMESPACE:-artifact-registry}"
 secret_name="${ARTIFACT_REGISTRY_SECRET_NAME:-reposilite-bootstrap-token}"
 admin_user="${ARTIFACT_REGISTRY_ADMIN_USER:-admin}"
 token_file="${ARTIFACT_REGISTRY_TOKEN_FILE:-${repo_root}/.secrets/reposilite/admin-token}"
+artifact_registry_url="${ARTIFACT_REGISTRY_URL:?}"
+artifact_registry_releases_url="${ARTIFACT_REGISTRY_RELEASES_URL:?}"
+artifact_registry_snapshots_url="${ARTIFACT_REGISTRY_SNAPSHOTS_URL:?}"
 
 mkdir -p "$(dirname "${token_file}")"
 chmod 700 "$(dirname "${token_file}")"
@@ -39,14 +42,13 @@ cat <<EOF
 Reposilite bootstrap token is applied.
 
 URL:
-  http://maven.b.lab.home
+  ${artifact_registry_url}
 
 Maven repositories:
-  http://maven.b.lab.home/releases
-  http://maven.b.lab.home/snapshots
+  ${artifact_registry_releases_url}
+  ${artifact_registry_snapshots_url}
 
 Credentials:
   username: ${admin_user}
   password file: ${token_file}
 EOF
-

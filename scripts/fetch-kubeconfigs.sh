@@ -3,16 +3,14 @@
 # LAN IP, and merge them into ~/.kube/config (with a backup).
 set -euo pipefail
 
-OUT_DIR="$(cd "$(dirname "$0")/.." && pwd)/kubeconfigs"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/env.sh
+source "${script_dir}/lib/env.sh"
+
+OUT_DIR="${repo_root}/kubeconfigs"
 mkdir -p "$OUT_DIR"
 
-cd "$(dirname "$0")/.."
-set -a
-# shellcheck disable=SC1091
-[ -f .env.example ] && . ./.env.example
-# shellcheck disable=SC1091
-[ -f .env.local ] && . ./.env.local
-set +a
+cd "${repo_root}"
 
 : "${CLUSTER_A_SERVER_1_IP:?}"
 : "${CLUSTER_B_SERVER_1_IP:?}"

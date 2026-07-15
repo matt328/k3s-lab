@@ -3,5 +3,8 @@ kind: Kustomization
 
 namespace: argocd
 
+components:
+  - ../../../components/lab-network
+
 resources:
   - ingress.yaml

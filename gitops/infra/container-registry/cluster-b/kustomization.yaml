@@ -3,10 +3,12 @@ kind: Kustomization
 
 namespace: container-registry
 
+components:
+  - ../../../components/lab-network
+
 resources:
   - namespace.yaml
   - pvc.yaml
   - deployment.yaml
   - service.yaml
   - ingress.yaml
-

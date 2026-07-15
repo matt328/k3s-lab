@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lab-network-var-sink
+  annotations:
+    config.kubernetes.io/local-config: "true"
+data:
+  values: |
+    $(CLUSTER_A_INGRESS_IP)
+    $(CLUSTER_B_INGRESS_IP)
+    $(METALLB_A_POOL)
+    $(METALLB_B_POOL)
+    $(ARGOCD_HOST)
+    $(GRAFANA_HOST)
+    $(LOKI_HOST)
+    $(PROMETHEUS_HOST)
+    $(TEMPO_HOST)
+    $(MAVEN_HOST)
+    $(REGISTRY_HOST)
+    $(ORDER_HOST)
+    $(TEMPO_OTLP_ENDPOINT)
+    $(LOKI_PUSH_URL)
+    $(PROMETHEUS_REMOTE_WRITE_URL)
+    $(REGISTRY_IMAGE_PREFIX)

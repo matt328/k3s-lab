@@ -6,7 +6,7 @@ version: 0.1.0-observability.9669693
 replicaCount: 1
 
 image:
-  repository: registry.b.lab.home/k3s-lab/payment-service
+  repository: $(REGISTRY_IMAGE_PREFIX)/payment-service
   tag: 0.1.0-observability.9669693
   digest: sha256:d6229ed30550d06cfe1d83ffc54590d826caca665f553f8d855a5b3d419b6c18
   pullPolicy: IfNotPresent
@@ -18,9 +18,9 @@ podAnnotations:
   prometheus.io/port: "8080"
 
 hostAliases:
-  - ip: 192.168.50.245
+  - ip: $(CLUSTER_B_INGRESS_IP)
     hostnames:
-      - tempo.b.lab.home
+      - $(TEMPO_HOST)
 
 terminationGracePeriodSeconds: 45
 
@@ -30,7 +30,7 @@ env:
   - name: PAYMENT_API_VERSION
     value: 0.1.0
   - name: MANAGEMENT_OTLP_TRACING_ENDPOINT
-    value: http://tempo.b.lab.home/v1/traces
+    value: $(TEMPO_OTLP_ENDPOINT)
   - name: MANAGEMENT_TRACING_SAMPLING_PROBABILITY
     value: "1.0"
 

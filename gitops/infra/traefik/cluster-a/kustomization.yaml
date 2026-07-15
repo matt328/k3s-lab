@@ -3,6 +3,9 @@ kind: Kustomization
 
 namespace: traefik
 
+components:
+  - ../../../components/lab-network
+
 helmCharts:
   - name: traefik
     repo: https://traefik.github.io/charts

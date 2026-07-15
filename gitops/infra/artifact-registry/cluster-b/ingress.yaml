@@ -5,7 +5,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: maven.b.lab.home
+    - host: $(MAVEN_HOST)
       http:
         paths:
           - path: /
@@ -15,4 +15,3 @@ spec:
                 name: reposilite
                 port:
                   number: 80
-

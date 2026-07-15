@@ -3,6 +3,9 @@ kind: Kustomization
 
 namespace: observability
 
+components:
+  - ../../../components/lab-network
+
 resources:
   - dashboards/application-fleet-overview.yaml
   - dashboards/service-drilldown.yaml

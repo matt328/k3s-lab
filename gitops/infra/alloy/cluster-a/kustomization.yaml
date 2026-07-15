@@ -3,6 +3,9 @@ kind: Kustomization
 
 namespace: observability
 
+components:
+  - ../../../components/lab-network
+
 helmCharts:
   - name: alloy
     repo: https://grafana.github.io/helm-charts

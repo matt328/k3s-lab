@@ -20,7 +20,7 @@ providers:
 service:
   enabled: true
   annotations:
-    metallb.universe.tf/loadBalancerIPs: 192.168.50.245
+    metallb.universe.tf/loadBalancerIPs: $(CLUSTER_B_INGRESS_IP)
   spec:
     type: LoadBalancer
 

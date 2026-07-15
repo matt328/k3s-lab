@@ -72,7 +72,7 @@ alloy:
 
       loki.write "default" {
         endpoint {
-          url = "http://loki.b.lab.home/loki/api/v1/push"
+          url = "$(LOKI_PUSH_URL)"
         }
       }
 
@@ -146,7 +146,7 @@ alloy:
 
       prometheus.remote_write "default" {
         endpoint {
-          url = "http://prometheus.b.lab.home/api/v1/write"
+          url = "$(PROMETHEUS_REMOTE_WRITE_URL)"
         }
       }
 

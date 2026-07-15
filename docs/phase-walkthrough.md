@@ -40,12 +40,17 @@ After this point, Argo CD manages itself from Git via:
 
 - `argocd/` — the Helm chart wrapper and values
 - `gitops/bootstrap/` — the root project and self-management Application
+- `gitops/bootstrap/repo-config.env` — the committed repo URL Kustomize injects into Argo CD resources
+- `gitops/components/lab-network/lab-network.env` — the committed GitOps-facing network/DNS/registry defaults Kustomize
+  injects into Argo-managed manifests
 
 Cluster credentials are not committed. `scripts/register-cluster-b.sh` generates and applies them directly.
 
 ## Phase 2: cluster ingress and platform networking
 
-Before installing Traefik for real application access, configure local DNS as documented in `docs/local-dns.md`.
+Before installing Traefik for real application access, configure local DNS as documented in `docs/local-dns.md`. If you
+change the default LAN or DNS names, update both `.env.local` for local scripts and
+`gitops/components/lab-network/lab-network.env` for Argo-rendered manifests.
 
 The intended model is:
 

@@ -3,6 +3,9 @@ kind: Kustomization
 
 namespace: metallb-system
 
+components:
+  - ../../../components/lab-network
+
 helmCharts:
   - name: metallb
     repo: https://metallb.github.io/metallb

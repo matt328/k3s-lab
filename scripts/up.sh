@@ -7,14 +7,11 @@
 # Vagrantfile: each master is provisioned before its agent.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/env.sh
+source "${script_dir}/lib/env.sh"
 
-set -a
-# shellcheck disable=SC1091
-[ -f .env.example ] && . ./.env.example
-# shellcheck disable=SC1091
-[ -f .env.local ] && . ./.env.local
-set +a
+cd "${repo_root}"
 
 enabled_profiles=()
 [ "${HOST_LOCAL_WORKERS_ENABLED:-false}" = "true" ] && enabled_profiles+=("local workers")

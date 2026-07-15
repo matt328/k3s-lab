@@ -5,16 +5,38 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 load_env_file() {
   local file="$1"
-  if [ -f "$file" ]; then
-    set -a
-    # shellcheck disable=SC1090
-    source "$file"
-    set +a
-  fi
+  local line name value
+  [ -f "$file" ] || return 0
+
+  while IFS= read -r line || [ -n "$line" ]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [ -n "$line" ] || continue
+    [[ "$line" != \#* ]] || continue
+    [[ "$line" == *=* ]] || continue
+
+    name="${line%%=*}"
+    value="${line#*=}"
+    name="${name%"${name##*[![:space:]]}"}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+
+    [[ "$name" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    [ -z "${!name+x}" ] || continue
+
+    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+      value="${value:1:${#value}-2}"
+    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+      value="${value:1:${#value}-2}"
+    fi
+
+    printf -v "$name" '%s' "$value"
+    export "$name"
+  done <"$file"
 }
 
-load_env_file "${repo_root}/.env.example"
 load_env_file "${repo_root}/.env.local"
+load_env_file "${repo_root}/.env.example"
 
 require_env() {
   local name="$1"

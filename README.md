@@ -40,9 +40,39 @@ NIC enslaved to it, so VMs get real LAN IPs. See **Host bridge setup** below.
 
 ## Configuration
 
-All environment-specific values (IPs, MACs, networking, k3s tokens, GitOps repo URL, GHCR namespace) live in
-`.env.local`, which is gitignored. The default VM IPs use `192.168.50.100`-`192.168.50.108`, leaving the
-`192.168.50.2`-`192.168.50.99` DHCP pool and MetalLB pools untouched.
+The lab has two configuration paths because some values are consumed by local shell/Vagrant scripts, while other values
+must be committed so Argo CD can render GitOps manifests from the repository.
+
+| File                                            | Committed? | Used by                          | Purpose                                                                                                      |
+| ----------------------------------------------- | ---------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `.env.example`                                  | yes        | humans and local scripts         | Documented defaults for local shell/Vagrant configuration.                                                   |
+| `.env.local`                                    | no         | `Vagrantfile` and `scripts/*.sh` | Your real local values: LAN settings, VM IPs/MACs, k3s tokens, repo URL, registry URLs, and script defaults. |
+| `gitops/bootstrap/repo-config.env`              | yes        | Kustomize/Argo CD                | Repo URL injected into Argo CD `Application`, `ApplicationSet`, and `AppProject` manifests.                  |
+| `gitops/components/lab-network/lab-network.env` | yes        | Kustomize/Argo CD                | GitOps-facing LAN, DNS, registry, artifact, and observability endpoint defaults.                             |
+
+For a personal local run, copy `.env.example` to `.env.local` and edit only `.env.local` for your machine-specific
+values. For a shared org import, also edit and commit the two GitOps config files before bootstrapping Argo CD. Argo CD
+does not read `.env.local`; it only sees committed Git files.
+
+This repository is intended to serve as a baseline. Since one GitOps repo/branch represents one environment, anyone who
+wants to stand up a separate personal lab should fork the repo and commit their own `gitops/bootstrap/repo-config.env`
+and `gitops/components/lab-network/lab-network.env` values to that fork.
+
+Local scripts use `scripts/lib/env.sh` and resolve values in this order:
+
+1. Environment variables already set by the caller.
+2. `.env.local`.
+3. `.env.example`.
+
+The `Vagrantfile` follows the same effective order. This lets you keep durable local settings in `.env.local` and still
+use one-off shell overrides when needed, for example:
+
+```bash
+HTTP_TRAFFIC_URL_TEMPLATE=http://order.a.lab.home/orders/{id} ./scripts/generate-http-traffic.sh
+```
+
+The default VM IPs use `192.168.50.100`-`192.168.50.108`, leaving the `192.168.50.2`-`192.168.50.99` DHCP pool and
+MetalLB pools untouched.
 
 ```bash
 cp .env.example .env.local
@@ -52,7 +82,19 @@ cp .env.example .env.local
 #     openssl rand -hex 32
 ```
 
-`GITOPS_REPO_URL` and `GHCR_OWNER` are not needed until Phase 1 (GitOps bootstrap) and can be left blank for now.
+`GITOPS_REPO_URL`, `GHCR_OWNER`, and the script CI/image variables are not needed until Phase 1+ and can be left as the
+documented defaults until you bootstrap GitOps and publish the sample apps.
+
+GitOps-managed network and DNS defaults live in:
+
+```text
+gitops/components/lab-network/lab-network.env
+```
+
+Update that file before bootstrapping Argo CD if your LAN, MetalLB pools, ingress hostnames, or lab registry/artifact
+hostnames differ from the checked-in defaults. Kustomize injects those values into the GitOps manifests at render time,
+so the concrete IPs and hostnames are not repeated across each Argo-managed application. Keep matching values in
+`.env.local` for local scripts that talk to the same endpoints.
 
 ## Host bridge (`br0`) setup
 
@@ -312,9 +354,14 @@ SSH.
    Kustomize injects that value into the Argo CD `Application`, `ApplicationSet`, and `AppProject` manifests at render
    time so the URL is not repeated across every Argo file.
 
-3. Commit and push any GitOps changes. Argo CD can only sync what exists in GitHub.
+3. If you changed LAN/DNS/registry defaults, update and commit `gitops/components/lab-network/lab-network.env`.
 
-4. Bootstrap Argo CD and register cluster B:
+   `.env.local` drives local scripts; `gitops/components/lab-network/lab-network.env` drives Argo-rendered manifests.
+   Keep them aligned for values that exist in both places, such as the MetalLB ingress IPs and lab registry host.
+
+4. Commit and push any GitOps changes. Argo CD can only sync what exists in GitHub.
+
+5. Bootstrap Argo CD and register cluster B:
 
    ```bash
    ./scripts/bootstrap-argocd.sh
@@ -329,7 +376,7 @@ SSH.
 
    The cluster-B token Secret is applied directly to the clusters and is not committed to this repository.
 
-5. Optional UI access before Phase 2a installs ingress:
+6. Optional UI access before Phase 2a installs ingress:
 
    ```bash
    kubectl --context cluster-a -n argocd port-forward svc/argocd-server 8080:80

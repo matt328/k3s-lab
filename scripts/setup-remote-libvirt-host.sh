@@ -46,8 +46,8 @@ Examples:
   scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0
   scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --bridge br0 \
     --env-prefix HOST_2
-  scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --dns "192.168.50.210" \
-    --dns-search lab.home --ignore-auto-dns
+  scripts/setup-remote-libvirt-host.sh --iface enp0s31f6 --dns "$LAB_DNS" \
+    --dns-search "$LAB_DOMAIN" --ignore-auto-dns
 EOF
 }
 
