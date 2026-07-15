@@ -502,6 +502,8 @@ cluster-b: 192.168.50.246
 Verify:
 
 ```bash
+export PATH="$(./scripts/ensure-linkerd-cli.sh):$PATH"
+
 linkerd --context cluster-a check
 linkerd --context cluster-b check
 linkerd --context cluster-a multicluster check
@@ -586,27 +588,30 @@ skopeo copy --dest-tls-verify=false \
   docker://registry.b.lab.home/k3s-lab/registry-probe:busybox
 ```
 
-## Phase 5.3: Order API CI simulation
+## Phase 5.3: API CI simulation
 
-The Order API contract project is vendored under:
+The API contract projects are vendored under:
 
 ```text
 apps/apis/order-api
+apps/apis/payment-api
 ```
 
 This keeps the lab self-contained while preserving the target architecture of one repository per API artifact. The
-checked-in Gradle wrapper publishes `dev.teeter.demos.apis:order-api-spec:<version>@yaml` to Reposilite.
+checked-in Gradle wrappers publish `dev.teeter.demos.apis:*:<version>@yaml` artifacts to Reposilite.
 
-Simulate a feature-branch publish:
+Simulate feature-branch publishes:
 
 ```bash
 ./scripts/ci-order-api.sh feature feature/order-api-change
+./scripts/ci-payment-api.sh feature feature/payment-api-change
 ```
 
-Simulate a main-branch release:
+Simulate main-branch releases:
 
 ```bash
 ./scripts/ci-order-api.sh main
+./scripts/ci-payment-api.sh main
 ```
 
 ## Phase 5.4: Spring service cloud-native baseline and deployment
@@ -711,7 +716,25 @@ vagrant destroy -f
 ./scripts/bootstrap-artifact-registry.sh
 ./scripts/configure-oci-registry-nodes.sh
 ./scripts/bootstrap-linkerd.sh
+./scripts/ci-order-api.sh main
+./scripts/ci-payment-api.sh main
+./scripts/ci-order-service.sh main
+./scripts/ci-payment-service.sh main
+```
 
+Copy the fresh image `repository`, `tag`, and `digest` values printed by the service CI scripts into:
+
+```text
+gitops/apps/spring-demo/applications/order-service/values.yaml
+gitops/apps/spring-demo/applications/payment-service/values.yaml
+```
+
+Then commit and push those GitOps changes and wait for Argo CD to sync. A fresh lab registry starts empty, so the Spring
+applications cannot become healthy until the published image digests match the committed GitOps values.
+
+Verify:
+
+```bash
 kubectl --context cluster-a -n argocd get applications
 kubectl --context cluster-a -n traefik get svc traefik
 kubectl --context cluster-b -n traefik get svc traefik
@@ -723,6 +746,7 @@ curl -I http://argocd.a.lab.home
 curl -I http://maven.b.lab.home
 curl -I http://registry.b.lab.home/v2/
 curl -I http://grafana.b.lab.home
+curl http://order.a.lab.home/orders/smoke
 ```
 
 Expected:
@@ -736,3 +760,4 @@ Expected:
 - cluster B Linkerd gateway has `EXTERNAL-IP` `192.168.50.246`
 - `http://argocd.a.lab.home` returns `HTTP/1.1 200 OK`
 - `http://grafana.b.lab.home` returns `HTTP/1.1 302 Found` to `/login`
+- `http://order.a.lab.home/orders/smoke` returns a confirmed order JSON response
